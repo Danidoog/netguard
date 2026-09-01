@@ -5,7 +5,7 @@ from app.services.scan_service import ScanService
 scanner = NmapScanner()
 service = ScanService(scanner)
 
-hosts = service.scan_network("192.168.1.0/24")
+hosts = service.scan_network()
 
 for host in hosts:
     print(

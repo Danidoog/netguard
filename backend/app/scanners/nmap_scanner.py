@@ -17,11 +17,15 @@ class NmapScanner:
 
     def scan_hosts(self, target: str) -> list[Host]:
         command = [
-            self.nmap_path,
-            "-sn",
-            "-oX",
-            "-",
-            target
+         self.nmap_path,
+         "-sn",
+         "-n",
+         "-T4",
+         "--max-retries", "1",
+         "--host-timeout", "5s",
+         "-oX",
+         "-",
+         target
         ]
 
         result = subprocess.run(
