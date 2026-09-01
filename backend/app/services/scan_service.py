@@ -30,7 +30,6 @@ class ScanService:
     def __init__(self, scanner: NmapScanner):
         self.scanner = scanner
 
-    def scan_network(self, target: str | None = None) -> list[Host]:
-        if target is None:
-            target = get_local_network()
+    def scan_network(self) -> list[Host]:
+        target = get_local_network()
         return self.scanner.scan_hosts(target)
