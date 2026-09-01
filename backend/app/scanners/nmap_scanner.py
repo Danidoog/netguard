@@ -1,24 +1,38 @@
+import ipaddress
+import ipaddress
 import platform
 import shutil
 import socket
 import subprocess
+import time
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 import psutil
 from getmac import get_mac_address
 from mac_vendor_lookup import MacLookup, VendorNotFoundError
 
+from app.core.exceptions import (
+    InvalidTargetError,
+    NmapNotFoundError,
+    ScanFailedError,
+    ScanTimeoutError,
+)
 from app.models.host import Host
+from app.models.scan_result import ScanResult
+
+# Tiempo máximo (segundos) que se le da al proceso de Nmap completo antes
+# de considerarlo "agotado". Es independiente del --host-timeout por host.
+DEFAULT_SCAN_TIMEOUT_SECONDS = 120
 
 
 class NmapScanner:
 
     def __init__(self):
+        # Ya NO se lanza una excepción aquí: si Nmap no está instalado,
+        # el servidor igual arranca (útil para health checks, docs, etc.)
+        # y el error se reporta como respuesta HTTP normal al intentar
+        # escanear, no como un crash del proceso completo.
         self.nmap_path = shutil.which("nmap")
-
-        if self.nmap_path is None:
-            raise RuntimeError(
-                "Nmap no está instalado o no se encuentra en el PATH."
-            )
 
         self.mac_lookup = MacLookup()
         try:
@@ -36,7 +50,21 @@ class NmapScanner:
         # el que ARP nunca funciona, porque uno no se hace ARP a sí mismo).
         self._own_ip = self._detect_own_ip()
 
-    def scan_hosts(self, target: str) -> list[Host]:
+    def scan_hosts(
+        self,
+        target: str | None = None,
+        timeout: int = DEFAULT_SCAN_TIMEOUT_SECONDS,
+    ) -> ScanResult:
+        if self.nmap_path is None:
+            raise NmapNotFoundError(
+                "Nmap no está instalado o no se encuentra en el PATH."
+            )
+
+        if target is None:
+            target = self._detect_local_cidr()
+
+        self._validate_target(target)
+
         command = [
            self.nmap_path,
            "-sn",
@@ -50,14 +78,78 @@ class NmapScanner:
            target
         ]
 
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=True
+        start = time.perf_counter()
+
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired as e:
+            raise ScanTimeoutError(
+                f"El escaneo de '{target}' superó el tiempo límite de "
+                f"{timeout}s."
+            ) from e
+        except subprocess.CalledProcessError as e:
+            detail = (e.stderr or "").strip() or str(e)
+            raise ScanFailedError(
+                f"Nmap terminó con error al escanear '{target}': {detail}"
+            ) from e
+
+        try:
+            hosts = self._parse_hosts(result.stdout)
+        except ET.ParseError as e:
+            raise ScanFailedError(
+                f"No se pudo interpretar la salida de Nmap: {e}"
+            ) from e
+
+        elapsed = time.perf_counter() - start
+
+        return ScanResult(
+            target=target,
+            hosts=hosts,
+            total_hosts=len(hosts),
+            duration_seconds=round(elapsed, 2),
+            scanned_at=datetime.now(timezone.utc).isoformat(),
         )
 
-        return self._parse_hosts(result.stdout)
+    def _validate_target(self, target: str) -> None:
+        """Verifica que 'target' sea una IP o red CIDR válida antes de
+        pasarla a Nmap (defensa extra si en el futuro vuelve a aceptarse
+        como parámetro del usuario)."""
+        try:
+            ipaddress.ip_network(target, strict=False)
+        except ValueError as e:
+            raise InvalidTargetError(
+                f"'{target}' no es una dirección IP o red CIDR válida."
+            ) from e
+
+    def _detect_local_cidr(self) -> str:
+        """
+        Construye el CIDR de la red local (ej. '10.10.0.0/20') combinando
+        la IP propia con la máscara de subred real, leída de la interfaz
+        de red activa vía psutil.
+        """
+        if self._own_ip is None:
+            raise ScanFailedError(
+                "No se pudo determinar la IP local para detectar la red "
+                "a escanear."
+            )
+
+        for iface, addrs in psutil.net_if_addrs().items():
+            for addr in addrs:
+                if addr.family == socket.AF_INET and addr.address == self._own_ip:
+                    network = ipaddress.IPv4Network(
+                        f"{self._own_ip}/{addr.netmask}", strict=False
+                    )
+                    return str(network)
+
+        raise ScanFailedError(
+            "No se pudo determinar la máscara de red de la interfaz local."
+        )
 
     def _is_locally_administered(self, mac: str) -> bool:
         """
