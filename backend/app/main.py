@@ -7,6 +7,15 @@ from app.core.exceptions import NetGuardError
 from app.scanners.nmap_scanner import NmapScanner
 from app.services.scan_service import ScanService
 
+#Importaciones usados para la base de datos
+from app.core.database import engine, Base
+from app.models import scan_result
+from app.core.database import SessionLocal
+from app.db.models import ScanRecord
+from fastapi import HTTPException
+from app.core.database import SessionLocal
+from app.db.models import ScanRecord
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="NetGuard API",
@@ -68,3 +77,67 @@ def root():
 def scan_network():
     result = scan_service.scan_network()
     return asdict(result)
+
+@app.get("/api/scans")
+def get_scan_history():
+    db = SessionLocal()
+
+    try:
+        scans = db.query(ScanRecord).all()
+        return [
+            {
+                "id": s.id,
+                "target": s.target,
+                "total_hosts": s.total_hosts,
+                "duration_seconds": s.duration_seconds,
+                "scanned_at": s.scanned_at,
+                "hosts": [
+                    {"ip": h.ip, "hostname": h.hostname, "mac": h.mac, "vendor": h.vendor, "status": h.status}
+                    for h in s.hosts
+                ],
+            }
+            for s in scans
+        ]
+    finally:
+        db.close()
+
+
+@app.get("/api/scans/{scan_id}")
+def get_scan_detail(scan_id: int):
+    db = SessionLocal()
+
+    try: 
+        scan = db.query(ScanRecord).filter(ScanRecord.id == scan_id).first()
+        if scan is None:
+            raise HTTPException(status_code=404, detail=f"Escaneo con el ID {scan_id} no encontrado.")
+
+        return{
+            "id": scan.id,
+            "target": scan.target,
+            "total_hosts": scan.total_hosts,
+            "duration_seconds": scan.duration_seconds,
+            "scanned_at": scan.scanned_at,
+        }
+    finally:
+        db.close()
+
+@app.get("/api/scans/{scan_id}/hosts")
+def get_scan_hosts(scan_id: int):
+    db = SessionLocal()
+    try: 
+        scan = db.query(ScanRecord).filter(ScanRecord.id == scan_id).first()
+        if scan is None: 
+            raise HTTPException(status_code=404, detail=f"Escaneo con el ID {scan_id} no encontrado")
+
+        return[
+            {
+                "ip": h.ip,
+                "hostname": h.hostname,
+                "mac": h.mac,
+                "vendor": h.vendor,
+                "status": h.status,
+            }
+            for h in scan.hosts
+        ]
+    finally: 
+        db.close()

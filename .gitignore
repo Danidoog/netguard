@@ -27,3 +27,6 @@ node_modules/
 # Builds
 dist/
 build/
+
+#Base de Datos
+backend/app/db/*.db
