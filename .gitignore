@@ -30,3 +30,11 @@ build/
 
 #Base de Datos
 backend/app/db/*.db
+# Base de datos en cualquier ubicación
+*.db
+*.sqlite
+*.sqlite3
+
+# Entorno virtual (por si acaso)
+venv/
+env/
