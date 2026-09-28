@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { StatCard } from '../components/StatCard';
 import { DeviceTable } from '../components/DeviceTable';
-import { createScan, getScanHistory } from '../api/scans';
+import { createScan, getScanHistory, getScanDetail, getScanHosts } from '../api/scans';
 import type { ScanResult } from '../types/scan.types';
 import { ApiError } from '../errors/apiErrors';
 
@@ -14,25 +14,31 @@ export function Dashboard() {
     cargarUltimoEscaneo();
   }, []);
 
-  // ✅ Simplemente trae el historial (ya incluye hosts)
+  // En Dashboard.tsx
   const cargarUltimoEscaneo = async () => {
     try {
       const historial = await getScanHistory();
       if (historial.length > 0) {
-        setResultado(historial[0] as any);
+        // ✅ Traer el detalle del PRIMERO (sin hosts)
+        const ultimo = await getScanDetail(historial[0].id);
+        // ✅ Traer los hosts del PRIMERO
+        const hosts = await getScanHosts(historial[0].id);
+
+        setResultado({
+          ...ultimo,
+          hosts: hosts,
+        });
       }
     } catch (err) {
       console.error('Error cargando último escaneo:', err);
     }
   };
 
-  // ✅ Después de escanear, trae el historial actualizado
   const escanearRed = async () => {
     setCargando(true);
     setError(null);
     try {
       await createScan();
-      // Traer el historial actualizado para obtener el nuevo escaneo con hosts
       const historial = await getScanHistory();
       if (historial.length > 0) {
         setResultado(historial[0] as any);
@@ -57,6 +63,7 @@ export function Dashboard() {
 
   return (
     <div className="p-8">
+      {/* Header */}
       <div className="mb-8 flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
@@ -65,22 +72,23 @@ export function Dashboard() {
         <button
           onClick={escanearRed}
           disabled={cargando}
-          className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${
-            cargando
-              ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
-          }`}
+          className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${cargando
+            ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+            : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
         >
           {cargando ? 'Escaneando...' : 'Iniciar escaneo'}
         </button>
       </div>
 
+      {/* Error */}
       {error && (
         <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm">
           {error}
         </div>
       )}
 
+      {/* Tarjetas */}
       {resultado && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           <StatCard label="Dispositivos" value={resultado.total_hosts} icon="📡" color="blue" />
@@ -90,6 +98,7 @@ export function Dashboard() {
         </div>
       )}
 
+      {/* Tabla */}
       <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
         <div className="p-6 border-b border-slate-700 flex items-center justify-between">
           <div>
