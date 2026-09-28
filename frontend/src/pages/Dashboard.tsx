@@ -1,45 +1,54 @@
 import { useState, useEffect } from 'react';
 import { StatCard } from '../components/StatCard';
 import { DeviceTable } from '../components/DeviceTable';
-import { createScan, getScanHistory, getScanDetail } from '../api/scans';
+import { createScan, getScanHistory } from '../api/scans';
 import type { ScanResult } from '../types/scan.types';
+import { ApiError } from '../errors/apiErrors';
 
 export function Dashboard() {
   const [resultado, setResultado] = useState<ScanResult | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ Cargar el último escaneo al abrir el Dashboard
   useEffect(() => {
     cargarUltimoEscaneo();
   }, []);
 
+  // ✅ Simplemente trae el historial (ya incluye hosts)
   const cargarUltimoEscaneo = async () => {
     try {
       const historial = await getScanHistory();
       if (historial.length > 0) {
-        const ultimo = await getScanDetail(historial[0].id);
-        setResultado(ultimo);
+        setResultado(historial[0] as any);
       }
     } catch (err) {
       console.error('Error cargando último escaneo:', err);
     }
   };
 
+  // ✅ Después de escanear, trae el historial actualizado
   const escanearRed = async () => {
     setCargando(true);
     setError(null);
     try {
-      const datos = await createScan();
-      setResultado(datos);
+      await createScan();
+      // Traer el historial actualizado para obtener el nuevo escaneo con hosts
+      const historial = await getScanHistory();
+      if (historial.length > 0) {
+        setResultado(historial[0] as any);
+      }
     } catch (err) {
-      setError('No se pudo conectar con el servidor');
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Ocurrió un error inesperado');
+      }
       console.error(err);
     } finally {
       setCargando(false);
     }
   };
-  
+
   const fabricantes = resultado?.hosts?.reduce((acc: Record<string, number>, host) => {
     const vendor = host.vendor || 'Desconocido';
     acc[vendor] = (acc[vendor] || 0) + 1;
@@ -48,7 +57,6 @@ export function Dashboard() {
 
   return (
     <div className="p-8">
-      {/* Header */}
       <div className="mb-8 flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
@@ -67,14 +75,12 @@ export function Dashboard() {
         </button>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm">
           {error}
         </div>
       )}
 
-      {/* Tarjetas */}
       {resultado && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           <StatCard label="Dispositivos" value={resultado.total_hosts} icon="📡" color="blue" />
@@ -84,7 +90,6 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Tabla */}
       <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
         <div className="p-6 border-b border-slate-700 flex items-center justify-between">
           <div>
@@ -116,7 +121,5 @@ export function Dashboard() {
         </div>
       </div>
     </div>
-    
   );
-  
 }

@@ -10,6 +10,7 @@ import type {
   Host,
 } from '../types/scan.types';
 import { DeviceTable } from '../components/DeviceTable';
+import { ApiError } from '../errors/apiErrors';
 
 export function History() {
   const [historial, setHistorial] = useState<ScanHistoryItem[]>([]);
@@ -17,6 +18,7 @@ export function History() {
   const [hosts, setHosts] = useState<Host[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetalle, setErrorDetalle] = useState<string | null>(null);
 
   // ✅ Estados para búsqueda y filtros
   const [busqueda, setBusqueda] = useState('');
@@ -33,7 +35,12 @@ export function History() {
       const datos = await getScanHistory();
       setHistorial(datos);
     } catch (err) {
-      setError('No se pudo cargar el historial');
+      // ✅ Manejo específico de errores
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('No se pudo cargar el historial');
+      }
       console.error(err);
     } finally {
       setCargando(false);
@@ -41,6 +48,7 @@ export function History() {
   };
 
   const verDetalle = async (id: number) => {
+    setErrorDetalle(null);
     try {
       const [detalleData, hostsData] = await Promise.all([
         getScanDetail(id),
@@ -49,6 +57,12 @@ export function History() {
       setDetalle(detalleData);
       setHosts(hostsData);
     } catch (err) {
+      // ✅ Manejo específico de errores en el modal
+      if (err instanceof ApiError) {
+        setErrorDetalle(err.message);
+      } else {
+        setErrorDetalle('No se pudo cargar el detalle del escaneo');
+      }
       console.error('Error cargando detalle:', err);
     }
   };
@@ -56,17 +70,17 @@ export function History() {
   const cerrarModal = () => {
     setDetalle(null);
     setHosts([]);
+    setErrorDetalle(null);
   };
 
-  // ✅ Filtrar historial según búsqueda y fecha
+  // Filtrar historial según búsqueda y fecha
+  
   const historialFiltrado = useMemo(() => {
     return historial.filter((item) => {
-      // Filtro por búsqueda (objetivo)
       const coincideBusqueda = item.target
         .toLowerCase()
         .includes(busqueda.toLowerCase());
 
-      // Filtro por fecha
       let coincideFecha = true;
       if (fechaFiltro) {
         const fechaItem = new Date(item.scanned_at).toISOString().split('T')[0];
@@ -77,7 +91,6 @@ export function History() {
     });
   }, [historial, busqueda, fechaFiltro]);
 
-  // ✅ Limpiar filtros
   const limpiarFiltros = () => {
     setBusqueda('');
     setFechaFiltro('');
@@ -91,9 +104,8 @@ export function History() {
         <p className="text-slate-400">Todos los escaneos realizados</p>
       </div>
 
-      {/* ✅ Barra de filtros */}
+      {/* Barra de filtros */}
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        {/* Búsqueda */}
         <div className="relative flex-1 min-w-[250px]">
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"
@@ -117,7 +129,6 @@ export function History() {
           />
         </div>
 
-        {/* Fecha */}
         <input
           type="date"
           value={fechaFiltro}
@@ -125,7 +136,6 @@ export function History() {
           className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
         />
 
-        {/* Botón limpiar */}
         {(busqueda || fechaFiltro) && (
           <button
             onClick={limpiarFiltros}
@@ -135,7 +145,6 @@ export function History() {
           </button>
         )}
 
-        {/* Contador */}
         <span className="text-sm text-slate-400 ml-auto">
           Mostrando {historialFiltrado.length} de {historial.length}
         </span>
@@ -235,6 +244,14 @@ export function History() {
                 ×
               </button>
             </div>
+
+            {/* ✅ Error dentro del modal */}
+            {errorDetalle && (
+              <div className="m-4 p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm">
+                {errorDetalle}
+              </div>
+            )}
+
             <div className="p-4">
               <DeviceTable hosts={hosts} />
             </div>
