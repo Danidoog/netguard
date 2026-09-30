@@ -6,6 +6,7 @@ interface SidebarProps {
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+  { id: 'devices', label: 'Dispositivos', icon: '📡' },
   { id: 'history', label: 'Historial', icon: '📜' },
   { id: 'analytics', label: 'Estadísticas', icon: '📈' },
   { id: 'settings', label: 'Configuración', icon: '⚙️' },

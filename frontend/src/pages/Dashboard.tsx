@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { StatCard } from '../components/StatCard';
 import { DeviceTable } from '../components/DeviceTable';
-import { createScan, getScanHistory, getScanDetail, getScanHosts } from '../api/scans';
+import { createScan, getScanHistory } from '../api/scans';
 import type { ScanResult } from '../types/scan.types';
 import { ApiError } from '../errors/apiErrors';
 
@@ -14,20 +14,11 @@ export function Dashboard() {
     cargarUltimoEscaneo();
   }, []);
 
-  // En Dashboard.tsx
   const cargarUltimoEscaneo = async () => {
     try {
       const historial = await getScanHistory();
       if (historial.length > 0) {
-        // ✅ Traer el detalle del PRIMERO (sin hosts)
-        const ultimo = await getScanDetail(historial[0].id);
-        // ✅ Traer los hosts del PRIMERO
-        const hosts = await getScanHosts(historial[0].id);
-
-        setResultado({
-          ...ultimo,
-          hosts: hosts,
-        });
+        setResultado(historial[0] as any);
       }
     } catch (err) {
       console.error('Error cargando último escaneo:', err);
@@ -63,6 +54,35 @@ export function Dashboard() {
 
   return (
     <div className="p-8">
+      {/*  OVERLAY DE CARGA */}
+      {cargando && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8 text-center max-w-sm shadow-2xl">
+            {/* Spinner */}
+            <div className="relative w-20 h-20 mx-auto mb-6">
+              <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full" />
+              <div className="absolute inset-0 border-4 border-transparent border-t-blue-500 rounded-full animate-spin" />
+              <div className="absolute inset-2 border-4 border-transparent border-t-purple-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-2xl">📡</span>
+              </div>
+            </div>
+
+            <h3 className="text-lg font-semibold text-white mb-2">
+              Escaneando red...
+            </h3>
+            <p className="text-sm text-slate-400 mb-4">
+              Esto puede tardar unos segundos. Por favor espera.
+            </p>
+
+            {/* Barra de progreso animada */}
+            <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden relative">
+              <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 rounded-full w-1/2 animate-progress" />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8 flex items-start justify-between">
         <div>
@@ -73,8 +93,8 @@ export function Dashboard() {
           onClick={escanearRed}
           disabled={cargando}
           className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${cargando
-            ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-            : 'bg-blue-600 hover:bg-blue-700 text-white'
+              ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
             }`}
         >
           {cargando ? 'Escaneando...' : 'Iniciar escaneo'}
