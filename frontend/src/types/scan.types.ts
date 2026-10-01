@@ -5,6 +5,7 @@ export interface Host {
   vendor: string;
   hostname: string | null;
   status?: string;
+  trusted?: boolean;
 }
 
 export interface ScanResult {
@@ -21,4 +22,5 @@ export interface ScanHistoryItem {
   total_hosts: number;
   duration_seconds: number;
   scanned_at: string;
+  hosts?: Host[];
 }

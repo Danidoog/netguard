@@ -1,43 +1,12 @@
 import { useState } from 'react';
 import type { Device, DeviceUpdate } from '../types/device.types';
+import { getDeviceIcon } from '../utils/deviceIcon';
 
 interface DevicesTableProps {
   devices: Device[];
   onUpdate: (mac: string, data: DeviceUpdate) => Promise<void>;
-}
-
-// ✅ Detección inteligente de íconos (por device_type + vendor)
-function getDeviceIcon(deviceType: string | null, vendor: string | null): string {
-  // 1. Intentar por device_type
-  if (deviceType) {
-    const t = deviceType.toLowerCase();
-    if (t.includes('router') || t.includes('gateway')) return '🌐';
-    if (t.includes('phone') || t.includes('mobile')) return '📱';
-    if (t.includes('computer') || t.includes('pc') || t.includes('laptop')) return '💻';
-    if (t.includes('tablet')) return '📱';
-    if (t.includes('printer')) return '🖨️';
-    if (t.includes('tv') || t.includes('smart')) return '📺';
-    if (t.includes('camera')) return '📷';
-    if (t.includes('speaker') || t.includes('audio')) return '🔊';
-    if (t.includes('watch')) return '⌚';
-    if (t.includes('console') || t.includes('game')) return '🎮';
-    if (t.includes('iot') || t.includes('smart')) return '🔌';
-  }
-
-  // 2. Inferir del vendor
-  if (vendor) {
-    const v = vendor.toLowerCase();
-    if (v.includes('tp-link') || v.includes('netgear') || v.includes('cisco') || v.includes('router')) return '🌐';
-    if (v.includes('apple') || v.includes('samsung') || v.includes('xiaomi') || v.includes('huawei')) return '📱';
-    if (v.includes('intel') || v.includes('dell') || v.includes('hp') || v.includes('lenovo') || v.includes('asus')) return '💻';
-    if (v.includes('sony') || v.includes('lg') || v.includes('philips')) return '📺';
-    if (v.includes('canon') || v.includes('epson') || v.includes('brother')) return '🖨️';
-    if (v.includes('amazon') || v.includes('google') || v.includes('echo')) return '🔌';
-    if (v.includes('nintendo') || v.includes('playstation') || v.includes('xbox')) return '🎮';
-  }
-
-  // 3. Fallback: dispositivo genérico
-  return '📟';
+  onRowClick?: (device: Device) => void;
+  emptyMessage?: string;
 }
 
 // ✅ Badges de estado mejorados con indicadores visuales
@@ -98,7 +67,12 @@ function formatRelativeTime(dateString: string): string {
   return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
 }
 
-export function DevicesTable({ devices, onUpdate }: DevicesTableProps) {
+export function DevicesTable({
+  devices,
+  onUpdate,
+  onRowClick,
+  emptyMessage,
+}: DevicesTableProps) {
   const [editingMac, setEditingMac] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [updatingMac, setUpdatingMac] = useState<string | null>(null);
@@ -110,9 +84,13 @@ export function DevicesTable({ devices, onUpdate }: DevicesTableProps) {
         <div className="w-16 h-16 bg-slate-700 rounded-full mx-auto mb-4 flex items-center justify-center">
           <span className="text-2xl">📟</span>
         </div>
-        <p className="text-slate-400 font-medium">No hay dispositivos</p>
+        <p className="text-slate-400 font-medium">
+          {emptyMessage || 'No hay dispositivos'}
+        </p>
         <p className="text-sm text-slate-500 mt-1">
-          Los dispositivos aparecerán cuando hagas un escaneo
+          {emptyMessage
+            ? 'Prueba otro filtro o limpia la búsqueda'
+            : 'Los dispositivos aparecerán cuando hagas un escaneo'}
         </p>
       </div>
     );
@@ -175,7 +153,14 @@ export function DevicesTable({ devices, onUpdate }: DevicesTableProps) {
         </thead>
         <tbody className="divide-y divide-slate-700/50">
           {devices.map((device) => (
-            <tr key={device.mac} className="hover:bg-slate-700/30 transition-colors">
+            <tr
+              key={device.mac}
+              className={`hover:bg-slate-700/30 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
+              onClick={() => {
+                if (editingMac === device.mac) return;
+                onRowClick?.(device);
+              }}
+            >
               {/* Tipo con ícono + MAC */}
               <td className="py-3 px-4">
                 <div className="flex items-center gap-3">
@@ -184,7 +169,10 @@ export function DevicesTable({ devices, onUpdate }: DevicesTableProps) {
                   </span>
                   <div className="flex flex-col">
                     <button
-                      onClick={() => copyMac(device.mac)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyMac(device.mac);
+                      }}
                       className="font-mono text-xs text-slate-400 hover:text-blue-400 transition-colors text-left"
                       title="Copiar MAC"
                     >
@@ -198,7 +186,7 @@ export function DevicesTable({ devices, onUpdate }: DevicesTableProps) {
               </td>
 
               {/* Alias editable */}
-              <td className="py-3 px-4">
+              <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                 {editingMac === device.mac ? (
                   <input
                     type="text"
@@ -238,7 +226,7 @@ export function DevicesTable({ devices, onUpdate }: DevicesTableProps) {
               </td>
 
               {/* Confiable toggle */}
-              <td className="py-3 px-4">
+              <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                 <button
                   onClick={() => toggleTrusted(device)}
                   disabled={updatingMac === device.mac}
@@ -253,7 +241,7 @@ export function DevicesTable({ devices, onUpdate }: DevicesTableProps) {
               </td>
 
               {/* Acciones */}
-              <td className="py-3 px-4">
+              <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                 {editingMac === device.mac ? (
                   <div className="flex gap-2">
                     <button

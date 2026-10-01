@@ -1,4 +1,16 @@
 @import "tailwindcss";
+@config "../tailwind.config.js";
+
+@theme {
+  --color-surface: #1a1f2e;
+  --color-surface-light: #232936;
+  --color-surface-border: #3a4150;
+  --color-primary: #5b8def;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-muted: #8b93a7;
+}
 @keyframes progress-bar {
   0% {
     transform: translateX(-100%);
