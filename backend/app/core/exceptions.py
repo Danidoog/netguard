@@ -4,6 +4,10 @@ class NetGuardError(Exception):
     hereda de esta clase, para que un único exception_handler en FastAPI
     pueda convertir cualquiera de ellas en una respuesta HTTP consistente
     ({"error": {"code": ..., "message": ...}}).
+
+    [CALIDAD] ISO/IEC 25010 · Fiabilidad | IEEE 730 · Manejo de errores: La aplicación 
+    debe manejar los errores de manera consistente y predecible, proporcionando 
+    información clara sobre la causa del error y cómo resolverlo.
     """
 
     code = "INTERNAL_ERROR"

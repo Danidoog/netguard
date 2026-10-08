@@ -46,6 +46,8 @@ class ScanService:
 
             db.commit()
         except Exception:
+            # [CALIDAD] ISO/IEC 25010 · Fiabilidad: rollback de la transacción en caso de error 
+            # para mantener la consistencia de la base de datos.
             db.rollback()
             raise
         finally:

@@ -4,14 +4,14 @@ interface DeviceTableProps {
   hosts?: Host[];
 }
 
-// ✅ Detección inteligente de tipo + ícono
+//  Detección inteligente de tipo + ícono
 function getDeviceInfo(
   vendor: string | null,
   hostname: string | null,
   ip: string | null
 ): { icon: string; label: string } {
   const combined = `${vendor || ''} ${hostname || ''}`.toLowerCase();
-
+/** [CALIDAD] ISO/IEC 25010 · Usabilidad: tipos e íconos de dispositivo para lectura rápida */
   // Router / Gateway (usualmente .1)
   if (
     combined.includes('router') ||
