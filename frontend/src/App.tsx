@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
+import { Devices } from './pages/Devices';
 import { History } from './pages/History';
 import { Analytics } from './pages/Analytics';
 import { ErrorBoundary } from './errors/ErrorBoundary';
@@ -14,6 +15,7 @@ function App() {
         <Sidebar activeView={activeView} onViewChange={setActiveView} />
         <main className="flex-1 overflow-auto">
           {activeView === 'dashboard' && <Dashboard />}
+          {activeView === 'devices' && <Devices />}
           {activeView === 'history' && <History />}
           {activeView === 'analytics' && <Analytics />}
           {activeView === 'settings' && (
