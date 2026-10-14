@@ -11,6 +11,7 @@ export interface Host {
   model: string | null;
   device_type: string | null;
   os_hint: string | null;
+  trusted?: boolean;
 }
 
 export interface ScanResult {
@@ -35,5 +36,5 @@ export interface ScanHistoryItem {
   total_hosts: number;
   duration_seconds: number;
   scanned_at: string;
-  hosts: Host[];
+  hosts?: Host[];
 }

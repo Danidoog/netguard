@@ -10,7 +10,9 @@ interface State {
   error: Error | null;
   errorInfo: ErrorInfo | null;
 }
-
+/**
+ * [CALIDAD] ISO / IEC 25010 · Fiabilidad: la UI no se cae por un error del render
+ */
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);

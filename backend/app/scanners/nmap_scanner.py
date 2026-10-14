@@ -33,6 +33,7 @@ except ImportError:
 
 # Tiempo máximo (segundos) que se le da al proceso de Nmap completo antes
 # de considerarlo "agotado". Es independiente del --host-timeout por host.
+# [CALIDAD] ISO/IEC 25010 · Eficiencia de desempeño (limite de tiempo del escaneo) | IEEE 730 · Manejo de errores (tiempo de espera)
 DEFAULT_SCAN_TIMEOUT_SECONDS = 120
 
 # Puertos típicos para sondeo rápido. Lista corta a propósito.
@@ -606,6 +607,7 @@ class NmapScanner:
                 timeout=timeout,
             )
         except subprocess.TimeoutExpired as e:
+            #[CALIDAD] ISO /IEC 25010 · Fiabilidad | IEEE 730 · Manejo controlado de errores
             raise ScanTimeoutError(
                 f"El escaneo de '{target}' superó el tiempo límite de "
                 f"{timeout}s."
@@ -688,6 +690,7 @@ class NmapScanner:
     # ---------------------------------------------------------- existing code
 
     def _validate_target(self, target: str) -> None:
+        #[CALIDAD] ISO/IEC 25010 · Fiabilidad y seguridad: Valida la entrada antes de ejecutar Nmap para evitar errores y posibles vulnerabilidades.
         try:
             ipaddress.ip_network(target, strict=False)
         except ValueError as e:

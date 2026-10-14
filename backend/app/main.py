@@ -92,6 +92,9 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     convertido en un NetGuardError cae aquí. Nunca se expone el detalle
     interno al cliente (podría filtrar información del servidor); solo
     se registra en el log del servidor para depuración.
+    
+    [CALIDAD] ISO IEC 25010 · Seguridad (no filtra detalles internos) |
+    ISO/IEC · 25010 Fiabilidad   
     """
     print(f"[UNHANDLED ERROR] {type(exc).__name__}: {exc}")
     return JSONResponse(

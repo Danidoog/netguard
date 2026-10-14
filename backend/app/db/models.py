@@ -12,6 +12,7 @@ class ScanRecord(Base):
     id = Column(Integer, primary_key=True, index=True)
     target = Column(String, nullable=False)
     total_hosts = Column(Integer, nullable=False)
+    #[CALIDAD] ISO/IEC 25010 · Eficiencia: cada escaneo registra su duración (metrica ISO/IEC 25023)
     duration_seconds = Column(Float, nullable=False)
     scanned_at = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
