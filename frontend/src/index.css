@@ -1,16 +1,68 @@
 @import "tailwindcss";
+@config "../tailwind.config.js";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Tema oscuro (default) */
+:root,
+.dark {
+  --color-surface: #0f1419;
+  --color-surface-light: #1a1f2e;
+  --color-surface-lighter: #252b3d;
+  --color-surface-border: #2d3548;
+  --color-text: #f1f5f9;
+  --color-text-muted: #a8b3c4;
+  --color-text-light: #cbd5e1;
+  --color-primary-text-light: #047857;
+  --color-primary-text-dark: #34d399;
+  --color-primary-text: var(--color-primary-text-dark);
+  --color-danger-text-light: #b91c1c;
+  --color-danger-text-dark: #fca5a5;
+  --color-danger-text: var(--color-danger-text-dark);
+  --color-warning-text-light: #b45309;
+  --color-warning-text-dark: #fcd34d;
+  --color-warning-text: var(--color-warning-text-dark);
+}
+
+/* Tema claro */
+.light {
+  --color-surface: #f8fafc;
+  --color-surface-light: #ffffff;
+  --color-surface-lighter: #f1f5f9;
+  --color-surface-border: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-text-light: #475569;
+  --color-primary-text: var(--color-primary-text-light);
+  --color-danger-text: var(--color-danger-text-light);
+  --color-warning-text: var(--color-warning-text-light);
+}
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
 @keyframes progress-bar {
-  0% {
-    transform: translateX(-100%);
-  }
-  50% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(0%); }
+  100% { transform: translateX(100%); }
 }
 
 .animate-progress {
   animation: progress-bar 2s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+/* Transiciones suaves del sidebar */
+.sidebar-transition {
+  transition: width 0.3s ease;
 }

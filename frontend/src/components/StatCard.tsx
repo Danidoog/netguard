@@ -1,32 +1,34 @@
 // frontend/src/components/StatCard.tsx
+import type { ReactNode } from 'react';
+
 interface StatCardProps {
-  label: string;
+  label: ReactNode;
   value: string | number;
   change?: string;
-  icon: string;
-  color: 'blue' | 'green' | 'purple' | 'amber';
+  note?: string;
+  icon?: string;
+  color?: 'blue' | 'green' | 'purple' | 'amber';
 }
 
 const colorClasses = {
-  blue: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  green: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  purple: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  blue: 'border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-primary/20 dark:bg-primary/10 dark:text-primary-light',
+  green: 'border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400',
+  purple: 'border-amber-200 bg-amber-100 text-amber-700 dark:border-secondary/20 dark:bg-secondary/10 dark:text-secondary-light',
+  amber: 'border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400',
 };
 
-export function StatCard({ label, value, change, icon, color }: StatCardProps) {
+export function StatCard({ label, value, change, note, icon, color = 'blue' }: StatCardProps) {
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 hover:border-slate-600 transition-colors">
-      <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 rounded-lg border flex items-center justify-center ${colorClasses[color]}`}>
-          <span>{icon}</span>
+    <div className="rounded-xl border border-surface-border bg-surface-light p-5 transition-colors hover:border-primary/40">
+      {(icon || change) && (
+        <div className="mb-3 flex items-start justify-between">
+          {icon && <div aria-hidden="true" className={`flex h-10 w-10 items-center justify-center rounded-lg border ${colorClasses[color]}`}>{icon}</div>}
+          {change && <span className="text-xs text-text-muted">{change}</span>}
         </div>
-        {change && (
-          <span className="text-xs text-slate-500">{change}</span>
-        )}
-      </div>
-      <p className="text-sm text-slate-400 font-medium">{label}</p>
-      <p className="text-2xl font-bold text-white mt-1">{value}</p>
+      )}
+      <p className="text-sm font-medium text-text-muted">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-text">{value}</p>
+      {note && <p className="mt-1 text-xs text-text-muted">{note}</p>}
     </div>
   );
 }

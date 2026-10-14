@@ -1,139 +1,95 @@
-import { useState } from 'react';
+import { createElement, useMemo, useState } from 'react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Check,
+  Copy,
+  CircleHelp,
+  Edit,
+  Shield,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 import type { Device, DeviceUpdate } from '../types/device.types';
+import {
+  cleanHostname,
+  formatRelativeTime,
+  getDeviceIcon,
+  getDeviceTypeLabel,
+  isReallyNew,
+  normalizeMac,
+} from '../utils/deviceHelpers';
+import { ConfirmDialog } from './ConfirmDialog';
+import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
+import { Toast } from './Toast';
 
 interface DevicesTableProps {
   devices: Device[];
   onUpdate: (mac: string, data: DeviceUpdate) => Promise<void>;
+  onSelectDevice: (device: Device) => void;
 }
 
-// ✅ Detección inteligente de íconos (por device_type + vendor)
-function getDeviceIcon(deviceType: string | null, vendor: string | null): string {
-  // 1. Intentar por device_type
-  if (deviceType) {
-    const t = deviceType.toLowerCase();
-    if (t.includes('router') || t.includes('gateway')) return '🌐';
-    if (t.includes('phone') || t.includes('mobile')) return '📱';
-    if (t.includes('computer') || t.includes('pc') || t.includes('laptop')) return '💻';
-    if (t.includes('tablet')) return '📱';
-    if (t.includes('printer')) return '🖨️';
-    if (t.includes('tv') || t.includes('smart')) return '📺';
-    if (t.includes('camera')) return '📷';
-    if (t.includes('speaker') || t.includes('audio')) return '🔊';
-    if (t.includes('watch')) return '⌚';
-    if (t.includes('console') || t.includes('game')) return '🎮';
-    if (t.includes('iot') || t.includes('smart')) return '🔌';
-  }
+type SortColumn = 'device' | 'hostname' | 'ip' | 'status' | 'trusted';
 
-  // 2. Inferir del vendor
-  if (vendor) {
-    const v = vendor.toLowerCase();
-    if (v.includes('tp-link') || v.includes('netgear') || v.includes('cisco') || v.includes('router')) return '🌐';
-    if (v.includes('apple') || v.includes('samsung') || v.includes('xiaomi') || v.includes('huawei')) return '📱';
-    if (v.includes('intel') || v.includes('dell') || v.includes('hp') || v.includes('lenovo') || v.includes('asus')) return '💻';
-    if (v.includes('sony') || v.includes('lg') || v.includes('philips')) return '📺';
-    if (v.includes('canon') || v.includes('epson') || v.includes('brother')) return '🖨️';
-    if (v.includes('amazon') || v.includes('google') || v.includes('echo')) return '🔌';
-    if (v.includes('nintendo') || v.includes('playstation') || v.includes('xbox')) return '🎮';
-  }
-
-  // 3. Fallback: dispositivo genérico
-  return '📟';
-}
-
-// ✅ Badges de estado mejorados con indicadores visuales
-function getStatusBadge(device: Device) {
-  // Nuevo
-  if (device.is_new) {
-    return (
-      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 inline-flex items-center gap-1.5">
-        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-        Nuevo
-      </span>
-    );
-  }
-
-  // Ausente
-  if (!device.is_present) {
-    return (
-      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-600/20 text-slate-400 border border-slate-600/30 inline-flex items-center gap-1.5">
-        <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-        Ausente
-      </span>
-    );
-  }
-
-  // Confiable
-  if (device.trusted) {
-    return (
-      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1.5">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-        Confiable
-      </span>
-    );
-  }
-
-  // Presente pero no confiable
-  return (
-    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 inline-flex items-center gap-1.5">
-      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-      No confiable
-    </span>
-  );
-}
-
-// ✅ Formatear tiempo "hace X"
-function formatRelativeTime(dateString: string): string {
-  if (!dateString) return '—';
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
-
-  if (diffMin < 1) return 'Ahora';
-  if (diffMin < 60) return `Hace ${diffMin} min`;
-  if (diffHour < 24) return `Hace ${diffHour}h`;
-  if (diffDay < 7) return `Hace ${diffDay}d`;
-  return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
-}
-
-export function DevicesTable({ devices, onUpdate }: DevicesTableProps) {
+export function DevicesTable({ devices, onUpdate, onSelectDevice }: DevicesTableProps) {
   const [editingMac, setEditingMac] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [updatingMac, setUpdatingMac] = useState<string | null>(null);
-  const [copiedMac, setCopiedMac] = useState<string | null>(null);
+  const [optimisticTrusted, setOptimisticTrusted] = useState<Record<string, boolean>>({});
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; mac: string } | null>(null);
+  const [sortColumn, setSortColumn] = useState<SortColumn>('device');
+  const [sortAscending, setSortAscending] = useState(true);
+  const { copiedValue, copy } = useCopyToClipboard();
 
-  if (!devices || devices.length === 0) {
-    return (
-      <div className="text-center py-16">
-        <div className="w-16 h-16 bg-slate-700 rounded-full mx-auto mb-4 flex items-center justify-center">
-          <span className="text-2xl">📟</span>
-        </div>
-        <p className="text-slate-400 font-medium">No hay dispositivos</p>
-        <p className="text-sm text-slate-500 mt-1">
-          Los dispositivos aparecerán cuando hagas un escaneo
-        </p>
-      </div>
-    );
-  }
+  const copyValue = (value: string) => {
+    void copy(value).catch((error: unknown) => {
+      console.error('No se pudo copiar al portapapeles:', error);
+    });
+  };
 
   const startEdit = (device: Device) => {
     setEditingMac(device.mac);
     setEditValue(device.alias || '');
+    setSaveError(null);
   };
 
   const cancelEdit = () => {
     setEditingMac(null);
     setEditValue('');
+    setSaveError(null);
   };
 
-  const saveAlias = async (mac: string) => {
-    setUpdatingMac(mac);
+  const saveAlias = async (device: Device) => {
+    setUpdatingMac(device.mac);
+    setSaveError(null);
     try {
-      await onUpdate(mac, { alias: editValue });
-      setEditingMac(null);
-      setEditValue('');
+      await onUpdate(device.mac, { alias: editValue.trim() });
+      cancelEdit();
+    } catch (error) {
+      console.error('Error guardando alias:', error);
+      setSaveError(error instanceof Error ? error.message : 'No se pudo guardar el alias');
+    } finally {
+      setUpdatingMac(null);
+    }
+  };
+
+  const removeAlias = (mac: string) => {
+    setConfirmDialog({ isOpen: true, mac });
+  };
+
+  const confirmRemoveAlias = async () => {
+    if (!confirmDialog) return;
+    const { mac } = confirmDialog;
+    setConfirmDialog(null);
+    setUpdatingMac(mac);
+    setSaveError(null);
+    try {
+      await onUpdate(mac, { alias: '' });
+    } catch (error) {
+      console.error('Error quitando alias:', error);
+      setSaveError(error instanceof Error ? error.message : 'No se pudo quitar el alias');
     } finally {
       setUpdatingMac(null);
     }
@@ -141,148 +97,310 @@ export function DevicesTable({ devices, onUpdate }: DevicesTableProps) {
 
   const toggleTrusted = async (device: Device) => {
     setUpdatingMac(device.mac);
+    const trusted = !device.trusted;
+    setOptimisticTrusted((current) => ({ ...current, [device.mac]: trusted }));
     try {
-      await onUpdate(device.mac, { trusted: !device.trusted });
+      await onUpdate(device.mac, { trusted });
+      setOptimisticTrusted((current) => {
+        const next = { ...current };
+        delete next[device.mac];
+        return next;
+      });
+    } catch (error) {
+      setOptimisticTrusted((current) => {
+        const next = { ...current };
+        delete next[device.mac];
+        return next;
+      });
+      console.error('Error actualizando confianza del dispositivo:', error);
     } finally {
       setUpdatingMac(null);
     }
   };
 
-  const copyMac = async (mac: string) => {
-    try {
-      await navigator.clipboard.writeText(mac);
-      setCopiedMac(mac);
-      setTimeout(() => setCopiedMac(null), 2000);
-    } catch (err) {
-      console.error('Error copiando MAC:', err);
+  const sortedDevices = useMemo(() => [...devices].sort((left, right) => {
+    const values: Record<SortColumn, [string | number, string | number]> = {
+      device: [left.alias?.trim() || cleanHostname(left.last_hostname), right.alias?.trim() || cleanHostname(right.last_hostname)],
+      hostname: [cleanHostname(left.last_hostname), cleanHostname(right.last_hostname)],
+      ip: [left.last_ip || '', right.last_ip || ''],
+      status: [Number(left.is_present), Number(right.is_present)],
+      trusted: [Number(left.trusted), Number(right.trusted)],
+    };
+    const [leftValue, rightValue] = values[sortColumn];
+    const order = typeof leftValue === 'number' && typeof rightValue === 'number'
+      ? leftValue - rightValue
+      : String(leftValue).localeCompare(String(rightValue), 'es', { numeric: true });
+    return sortAscending ? order : -order;
+  }), [devices, sortAscending, sortColumn]);
+
+  const sortBy = (column: SortColumn) => {
+    if (sortColumn === column) setSortAscending((ascending) => !ascending);
+    else {
+      setSortColumn(column);
+      setSortAscending(true);
     }
   };
 
+  const sortIcon = (column: SortColumn) => {
+    if (column !== sortColumn) return <ArrowUpDown className="h-4 w-4" aria-hidden="true" />;
+    return sortAscending
+      ? <ArrowUp className="h-4 w-4" aria-hidden="true" />
+      : <ArrowDown className="h-4 w-4" aria-hidden="true" />;
+  };
+
+  const header = (label: string, column: SortColumn, className = '') => (
+    <th scope="col" aria-sort={column === sortColumn ? (sortAscending ? 'ascending' : 'descending') : 'none'} className={`px-3 py-3 text-left ${className}`}>
+      <button
+        type="button"
+        onClick={() => sortBy(column)}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-text-muted hover:text-text"
+      >
+        {label}
+        {sortIcon(column)}
+      </button>
+    </th>
+  );
+
+  if (devices.length === 0) {
+    return (
+      <div className="py-16 text-center">
+        <CircleHelp className="mx-auto mb-4 h-10 w-10 text-text-muted" aria-hidden="true" />
+        <p className="font-medium text-text-muted">No hay dispositivos que coincidan</p>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full table-fixed border-separate border-spacing-y-2 text-sm">
         <thead>
-          <tr className="border-b border-slate-700">
-            <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase">Dispositivo</th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase">Alias</th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase">IP</th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase">Fabricante</th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase">Estado</th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase">Última vez</th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase">Confiable</th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase">Acciones</th>
+          <tr className="border-b border-surface-border">
+            {header('Dispositivo', 'device', 'w-[44%] sm:w-[28%]')}
+            {header('Hostname', 'hostname', 'hidden w-[15%] sm:table-cell')}
+            {header('IP / MAC', 'ip', 'hidden w-[19%] sm:table-cell')}
+            {header('Estado', 'status', 'w-[28%] sm:w-[18%]')}
+            {header('Confianza', 'trusted', 'w-[28%] sm:w-[20%]')}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-700/50">
-          {devices.map((device) => (
-            <tr key={device.mac} className="hover:bg-slate-700/30 transition-colors">
-              {/* Tipo con ícono + MAC */}
-              <td className="py-3 px-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl" title={device.device_type || 'Dispositivo'}>
-                    {getDeviceIcon(device.device_type, device.vendor)}
+        <tbody>
+          {sortedDevices.map((device) => {
+            const isEditing = editingMac === device.mac;
+            const isUpdating = updatingMac === device.mac;
+            const isTrusted = optimisticTrusted[device.mac] ?? device.trusted;
+            const normalizedMac = normalizeMac(device.mac);
+            const hostname = cleanHostname(device.last_hostname);
+            const alias = device.alias?.trim();
+            const subtitle = device.vendor
+              ? `${device.vendor} · ${getDeviceTypeLabel(device.device_type)}`
+              : device.device_type
+                ? getDeviceTypeLabel(device.device_type)
+                : 'Sin datos';
+
+            return (
+              <tr
+                key={device.mac}
+                tabIndex={0}
+                onClick={() => !isEditing && onSelectDevice(device)}
+                onKeyDown={(event) => {
+                  if (event.target instanceof HTMLElement && event.target.closest('button, input')) return;
+                  if (!isEditing && (event.key === 'Enter' || event.key === ' ')) {
+                    event.preventDefault();
+                    onSelectDevice(device);
+                  }
+                }}
+                className={`group h-20 cursor-pointer align-middle transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
+                  device.is_present ? '' : 'opacity-70'
+                }`}
+                aria-label={`Abrir detalles de ${alias || (hostname !== '—' ? hostname : 'dispositivo sin alias')}`}
+              >
+                <td className="h-20 overflow-hidden rounded-l-lg border-y border-l border-surface-border bg-surface/40 px-3 py-2 align-middle transition-colors group-hover:bg-surface-lighter">
+                  {isEditing ? (
+                    <div data-alias-editor onClick={(event) => event.stopPropagation()}>
+                      <div className="flex items-center gap-1 rounded-lg border border-surface-border bg-surface px-2 focus-within:border-primary">
+                        <input
+                          autoFocus
+                          value={editValue}
+                          onChange={(event) => setEditValue(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault();
+                              void saveAlias(device);
+                            }
+                            if (event.key === 'Escape') cancelEdit();
+                          }}
+                          disabled={isUpdating}
+                          aria-label="Alias del dispositivo"
+                          className="min-w-0 flex-1 bg-transparent py-2 text-sm text-text outline-none"
+                          placeholder="Escribe un alias"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void saveAlias(device)}
+                          disabled={isUpdating}
+                          aria-label="Guardar alias"
+                          className="rounded p-1.5 text-primary-text hover:bg-primary/10 disabled:opacity-50"
+                        >
+                          <Check className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          disabled={isUpdating}
+                          aria-label="Cancelar edición"
+                          className="rounded p-1.5 text-text-muted hover:bg-surface-lighter disabled:opacity-50"
+                        >
+                          <X className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      </div>
+                      {saveError && <p role="alert" className="mt-1 text-xs text-danger">{saveError}</p>}
+                    </div>
+                  ) : (
+                    <div className="flex min-w-0 items-start gap-2.5">
+                      {createElement(getDeviceIcon(device.device_type), {
+                        className: 'mt-0.5 h-5 w-5 shrink-0 text-text-muted',
+                        'aria-hidden': true,
+                      })}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span title={alias || 'Sin alias'} className={`truncate font-medium ${alias ? 'text-text' : 'italic text-text-muted'}`}>
+                            {alias || 'Sin alias'}
+                          </span>
+                          {isReallyNew(device) && (
+                            <span
+                              title="Dispositivo visto por primera vez en las últimas 24 horas"
+                              className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary"
+                            >
+                              Nuevo
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              startEdit(device);
+                            }}
+                            aria-label="Editar alias"
+                            className="shrink-0 text-text-muted opacity-100 transition-opacity hover:text-primary-text sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
+                          >
+                            <Edit className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                          {alias && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                removeAlias(device.mac);
+                              }}
+                              disabled={isUpdating}
+                              aria-label="Quitar alias"
+                              className="shrink-0 text-text-muted opacity-100 transition-opacity hover:text-danger sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
+                            >
+                              <X className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          )}
+                        </div>
+                        <p className="mt-0.5 truncate text-xs text-text-muted" title={subtitle}>{subtitle}</p>
+                      </div>
+                    </div>
+                  )}
+                </td>
+
+                <td className="hidden h-20 overflow-hidden border-y border-surface-border bg-surface/40 px-3 py-2 align-middle font-mono text-xs text-text-muted transition-colors group-hover:bg-surface-lighter sm:table-cell">
+                  <span className="block truncate" title={hostname === '—' ? undefined : hostname}>
+                    {hostname}
                   </span>
-                  <div className="flex flex-col">
-                    <button
-                      onClick={() => copyMac(device.mac)}
-                      className="font-mono text-xs text-slate-400 hover:text-blue-400 transition-colors text-left"
-                      title="Copiar MAC"
-                    >
-                      {copiedMac === device.mac ? '✓ Copiado' : device.mac}
-                    </button>
-                    <span className="text-xs text-slate-600">
-                      {device.device_type || 'Tipo desconocido'}
-                    </span>
-                  </div>
-                </div>
-              </td>
+                </td>
 
-              {/* Alias editable */}
-              <td className="py-3 px-4">
-                {editingMac === device.mac ? (
-                  <input
-                    type="text"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    className="w-full px-2 py-1 bg-slate-900 border border-slate-600 rounded text-sm text-white focus:outline-none focus:border-blue-500"
-                    placeholder="Alias..."
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') saveAlias(device.mac);
-                      if (e.key === 'Escape') cancelEdit();
-                    }}
-                  />
-                ) : (
-                  <span className="text-slate-200">
-                    {device.alias || <span className="text-slate-500 italic">Sin alias</span>}
+                <td className="hidden h-20 overflow-hidden border-y border-surface-border bg-surface/40 px-3 py-2 align-middle transition-colors group-hover:bg-surface-lighter sm:table-cell">
+                  <div className="group/ip flex min-w-0 items-center gap-1">
+                    <span className="truncate font-mono text-sm text-text" title={device.last_ip || undefined}>{device.last_ip || '—'}</span>
+                    {device.last_ip && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          copyValue(device.last_ip!);
+                        }}
+                        aria-label="Copiar IP"
+                        className={`shrink-0 text-text-muted opacity-0 transition-opacity hover:text-primary-text group-hover/ip:opacity-100 group-hover:opacity-100 focus-visible:opacity-100 ${
+                          copiedValue === device.last_ip ? 'opacity-100 text-primary-text' : ''
+                        }`}
+                      >
+                        <Copy className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="group/mac mt-1 flex min-w-0 items-center gap-1">
+                    <span className="truncate font-mono text-xs text-text-muted">{normalizedMac}</span>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        copyValue(normalizedMac);
+                      }}
+                      aria-label="Copiar MAC"
+                      className={`shrink-0 text-text-muted opacity-0 transition-opacity hover:text-primary-text group-hover/mac:opacity-100 group-hover:opacity-100 focus-visible:opacity-100 ${
+                        copiedValue === normalizedMac ? 'opacity-100 text-primary-text' : ''
+                      }`}
+                    >
+                      <Copy className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </td>
+
+                <td className="h-20 overflow-hidden border-y border-surface-border bg-surface/40 px-3 py-2 align-middle transition-colors group-hover:bg-surface-lighter">
+                  <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
+                    device.is_present
+                      ? 'border-emerald-200 bg-emerald-100 text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400'
+                      : 'border-surface-border bg-surface-lighter text-text-muted'
+                  }`}>
+                    {device.is_present ? 'Presente' : 'Ausente'}
                   </span>
-                )}
-              </td>
+                  <p className="mt-1 text-xs text-text-muted">{formatRelativeTime(device.last_seen).toLocaleLowerCase('es')}</p>
+                </td>
 
-              {/* IP */}
-              <td className="py-3 px-4 font-mono text-xs text-blue-400">
-                {device.last_ip || '—'}
-              </td>
-
-              {/* Fabricante */}
-              <td className="py-3 px-4 text-slate-300 text-sm">
-                {device.vendor || 'Desconocido'}
-              </td>
-
-              {/* Estado */}
-              <td className="py-3 px-4">{getStatusBadge(device)}</td>
-
-              {/* Última vez visto */}
-              <td className="py-3 px-4 text-xs text-slate-400">
-                {formatRelativeTime(device.last_seen)}
-              </td>
-
-              {/* Confiable toggle */}
-              <td className="py-3 px-4">
-                <button
-                  onClick={() => toggleTrusted(device)}
-                  disabled={updatingMac === device.mac}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-all ${
-                    device.trusted
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-                      : 'bg-slate-700/30 text-slate-400 border-slate-600/30 hover:border-emerald-500/30 hover:text-emerald-400'
-                  } ${updatingMac === device.mac ? 'opacity-50 cursor-wait' : ''}`}
-                >
-                  {device.trusted ? '✓ Confiable' : 'Marcar confiable'}
-                </button>
-              </td>
-
-              {/* Acciones */}
-              <td className="py-3 px-4">
-                {editingMac === device.mac ? (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => saveAlias(device.mac)}
-                      disabled={updatingMac === device.mac}
-                      className="text-xs text-emerald-400 hover:text-emerald-300 font-medium"
-                    >
-                      Guardar
-                    </button>
-                    <button
-                      onClick={cancelEdit}
-                      className="text-xs text-slate-500 hover:text-slate-400 font-medium"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                ) : (
+                <td className="h-20 overflow-hidden rounded-r-lg border-y border-r border-surface-border bg-surface/40 px-3 py-2 align-middle transition-colors group-hover:bg-surface-lighter">
                   <button
-                    onClick={() => startEdit(device)}
-                    className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void toggleTrusted({ ...device, trusted: isTrusted });
+                    }}
+                    disabled={isUpdating}
+                    title={isTrusted ? 'Quitar confianza' : 'Marcar como confiable'}
+                    aria-label={`${isTrusted ? 'Quitar confianza al dispositivo' : 'Marcar como confiable el dispositivo'} ${device.last_ip || normalizedMac}`}
+                    className={`inline-flex w-40 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-wait disabled:opacity-60 ${
+                      isTrusted
+                        ? 'border-success/30 bg-success/10 text-success hover:bg-success/20'
+                        : 'border-surface-border bg-surface-lighter text-text hover:bg-surface-light'
+                    }`}
                   >
-                    Editar alias
+                    {isTrusted
+                      ? <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      : <Shield className="h-4 w-4 shrink-0" aria-hidden="true" />}
+                    <span className="truncate">
+                      {isUpdating ? 'Guardando…' : isTrusted ? 'Quitar confianza' : 'Marcar confiable'}
+                    </span>
                   </button>
-                )}
-              </td>
-            </tr>
-          ))}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
+      {confirmDialog && (
+        <ConfirmDialog
+          isOpen={confirmDialog.isOpen}
+          title="Quitar el alias"
+          message="Se mostrará el hostname original en su lugar. Puedes volver a asignar un alias cuando quieras."
+          confirmText="Quitar alias"
+          cancelText="Cancelar"
+          variant="danger"
+          onConfirm={() => void confirmRemoveAlias()}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
+      {copiedValue && <Toast key={copiedValue} />}
     </div>
   );
 }

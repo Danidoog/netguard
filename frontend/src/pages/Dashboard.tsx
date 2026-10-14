@@ -1,154 +1,572 @@
-import { useState, useEffect } from 'react';
-import { StatCard } from '../components/StatCard';
-import { DeviceTable } from '../components/DeviceTable';
-import { createScan, getScanHistory } from '../api/scans';
-import type { ScanResult } from '../types/scan.types';
+import { useState, useEffect, useRef } from 'react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CircleAlert,
+  MessageCircle,
+  RotateCcw,
+  UserMinus,
+  UserPlus,
+  Undo2,
+} from 'lucide-react';
+import { DeviceDetailModal } from '../components/DeviceDetailModal';
+import { ReviewCard } from '../components/ReviewCard';
+import { ScanProgressOverlay } from '../components/ScanProgressOverlay';
+import { createScan, getAllScanHistory } from '../api/scans';
+import { getDevices, updateDevice } from '../api/devices';
+import type { Device } from '../types/device.types';
+import type { Host, ScanHistoryItem, ScanResult } from '../types/scan.types';
 import { ApiError } from '../errors/apiErrors';
+import { getNetworkHealth, isReallyNew } from '../utils/deviceHelpers';
+import { Tooltip } from '../components/Tooltip';
+import { calculateScanEvents } from '../utils/scanEvents';
+import { formatRelativeTime } from '../utils/format';
+import { getDeviceStats } from '../utils/deviceStats';
+import type { BackendStatus } from '../hooks/useBackendStatus';
+import { GlossaryInfo } from '../components/GlossaryInfo';
 
-export function Dashboard() {
+interface DashboardProps {
+  onNavigate: (view: string) => void;
+  isOnline: boolean;
+  backendStatus: BackendStatus;
+  onRecheckBackend: () => Promise<void>;
+}
+
+interface DashboardAlert {
+  type: 'danger' | 'warning' | 'info';
+  message: string;
+  action?: {
+    label: string;
+    view: string;
+  };
+}
+
+function asScanResult(scan: ScanHistoryItem): ScanResult {
+  return {
+    target: scan.target,
+    hosts: scan.hosts || [],
+    total_hosts: scan.total_hosts,
+    duration_seconds: scan.duration_seconds,
+    scanned_at: scan.scanned_at,
+  };
+}
+
+export function Dashboard({ onNavigate, isOnline, backendStatus, onRecheckBackend }: DashboardProps) {
   const [resultado, setResultado] = useState<ScanResult | null>(null);
+  const [historial, setHistorial] = useState<ScanHistoryItem[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(true);
+  const [devicesLoadError, setDevicesLoadError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+  const [progreso, setProgreso] = useState(0);
+  const [startTime, setStartTime] = useState<number | undefined>();
   const [error, setError] = useState<string | null>(null);
-
+  const activeScanRef = useRef(false);
+  const cancelledScanRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const reviewCardRef = useRef<HTMLElement | null>(null);
+  const [selectedMac, setSelectedMac] = useState<string | null>(null);
+  const [undoDevice, setUndoDevice] = useState<Device | null>(null);
   useEffect(() => {
-    cargarUltimoEscaneo();
+    let cancelled = false;
+
+    async function cargarDashboard() {
+      try {
+        const [scans, knownDevices] = await Promise.all([getAllScanHistory(), getDevices()]);
+        if (cancelled) return;
+        setHistorial(scans);
+        setDevices(knownDevices);
+        if (scans.length > 0) setResultado(asScanResult(scans[0]));
+        setDevicesLoadError(null);
+      } catch (err) {
+        if (!cancelled) {
+          const message = err instanceof ApiError ? err.message : 'No se pudo cargar el dashboard.';
+          setError(message);
+          setDevicesLoadError('No se pudieron cargar los dispositivos.');
+          console.error('Error cargando el dashboard:', err);
+        }
+      } finally {
+        if (!cancelled) setDevicesLoading(false);
+      }
+    }
+
+    void cargarDashboard();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const cargarUltimoEscaneo = async () => {
-    try {
-      const historial = await getScanHistory();
-      if (historial.length > 0) {
-        setResultado(historial[0] as any);
-      }
-    } catch (err) {
-      console.error('Error cargando último escaneo:', err);
-    }
-  };
+  useEffect(() => {
+    if (!undoDevice) return;
+    const timer = window.setTimeout(() => setUndoDevice(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [undoDevice]);
+
+  useEffect(() => {
+    if (!cargando) return;
+    const intervalId = window.setInterval(() => {
+      setProgreso((current) => {
+        if (current >= 95) return 95;
+        if (current < 60) return Math.min(60, current + 2);
+        if (current < 85) return Math.min(85, current + 1);
+        if (current < 90) return Math.min(90, current + 0.5);
+        return Math.min(95, current + 0.2);
+      });
+    }, 500);
+    return () => window.clearInterval(intervalId);
+  }, [cargando]);
 
   const escanearRed = async () => {
+    if (activeScanRef.current) return;
+    activeScanRef.current = true;
+    cancelledScanRef.current = false;
     setCargando(true);
+    setProgreso(0);
+    setStartTime(Date.now());
     setError(null);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     try {
-      await createScan();
-      const historial = await getScanHistory();
-      if (historial.length > 0) {
-        setResultado(historial[0] as any);
-      }
+      const scan = await createScan({ signal: controller.signal });
+      if (cancelledScanRef.current) return;
+      setProgreso(100);
+      await new Promise((resolve) => window.setTimeout(resolve, 500));
+      if (cancelledScanRef.current) return;
+      setResultado(scan);
+      await onRecheckBackend();
+      const [scans, knownDevices] = await Promise.all([getAllScanHistory(), getDevices()]);
+      setHistorial(scans);
+      setDevices(knownDevices);
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
       if (err instanceof ApiError) {
-        setError(err.message);
+        if (err.code === 'NETWORK_ERROR' || err.type === 'NETWORK_ERROR' || err.code === 'TIMEOUT') {
+          setError('No se pudo conectar con el servidor. Verifica que el backend esté corriendo.');
+        } else if (err.code === 'INVALID_TARGET') {
+          setError('La red especificada no es válida. Verifica el formato (ej: 192.168.0.0/24).');
+        } else if (err.code === 'SCAN_TIMEOUT') {
+          setError('El escaneo tardó demasiado. Intenta escanear un rango más pequeño.');
+        } else if (err.code === 'NMAP_NOT_FOUND') {
+          setError('Nmap no está instalado en el servidor. Contacta al administrador.');
+        } else {
+          setError(err.message);
+        }
       } else {
         setError('Ocurrió un error inesperado');
       }
       console.error(err);
     } finally {
+      activeScanRef.current = false;
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
       setCargando(false);
+      setProgreso(0);
+      setStartTime(undefined);
     }
   };
 
-  const fabricantes = resultado?.hosts?.reduce((acc: Record<string, number>, host) => {
-    const vendor = host.vendor || 'Desconocido';
-    acc[vendor] = (acc[vendor] || 0) + 1;
-    return acc;
-  }, {}) || {};
+  const cancelScanDisplay = () => {
+    cancelledScanRef.current = true;
+    abortControllerRef.current?.abort();
+    setCargando(false);
+    setProgreso(0);
+    setError(null);
+    setStartTime(undefined);
+  };
+
+  const handleToggleTrusted = async (device: Device) => {
+    try {
+      const updated = await updateDevice(device.mac, { trusted: !device.trusted });
+      setDevices((current) => current.map((device) => (
+        device.mac.toUpperCase() === updated.mac.toUpperCase() ? { ...device, ...updated } : device
+      )));
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo actualizar la confianza del dispositivo.');
+      console.error('Error actualizando confianza del dispositivo:', err);
+      throw err;
+    }
+  };
+
+  const handleMarkTrusted = async (device: Device) => {
+    setError(null);
+    setDevices((current) => current.map((item) => (
+      item.mac.toUpperCase() === device.mac.toUpperCase() ? { ...item, trusted: true } : item
+    )));
+    try {
+      const updated = await updateDevice(device.mac, { trusted: true });
+      setDevices((current) => current.map((item) => (
+        item.mac.toUpperCase() === updated.mac.toUpperCase() ? { ...item, ...updated } : item
+      )));
+      setUndoDevice(device);
+    } catch (err) {
+      setDevices((current) => current.map((item) => (
+        item.mac.toUpperCase() === device.mac.toUpperCase() ? { ...item, trusted: device.trusted } : item
+      )));
+      setError(err instanceof ApiError ? err.message : 'No se pudo actualizar la confianza del dispositivo.');
+      console.error('Error marcando el dispositivo como confiable:', err);
+      throw err;
+    }
+  };
+
+  const undoMarkTrusted = async () => {
+    if (!undoDevice) return;
+    const device = undoDevice;
+    setUndoDevice(null);
+    setDevices((current) => current.map((item) => (
+      item.mac.toUpperCase() === device.mac.toUpperCase() ? { ...item, trusted: false } : item
+    )));
+    try {
+      const updated = await updateDevice(device.mac, { trusted: false });
+      setDevices((current) => current.map((item) => (
+        item.mac.toUpperCase() === updated.mac.toUpperCase() ? { ...item, ...updated } : item
+      )));
+      setError(null);
+    } catch (err) {
+      setDevices((current) => current.map((item) => (
+        item.mac.toUpperCase() === device.mac.toUpperCase() ? { ...item, trusted: true } : item
+      )));
+      setError(err instanceof ApiError ? err.message : 'No se pudo deshacer el cambio de confianza.');
+      console.error('Error deshaciendo la confianza del dispositivo:', err);
+    }
+  };
+
+  const handleRetryDevices = async () => {
+    setDevicesLoading(true);
+    setDevicesLoadError(null);
+    try {
+      setDevices(await getDevices());
+      setError(null);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'No se pudieron cargar los dispositivos.';
+      setDevicesLoadError(message);
+      setError(message);
+      console.error('Error reintentando la carga de dispositivos:', err);
+    } finally {
+      setDevicesLoading(false);
+    }
+  };
+
+  const focusReviewCard = () => {
+    reviewCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => {
+      reviewCardRef.current?.querySelector<HTMLButtonElement>('[data-mark-trusted]')?.focus();
+    }, 350);
+  };
+
+  const navigateToUnverified = () => {
+    sessionStorage.setItem('netguard-devices-initial-filter', 'unverified');
+    onNavigate('devices');
+  };
+
+  const healthStats = getDeviceStats(devices.filter((device) => device.is_present));
+  const health = getNetworkHealth(devices);
+  const chronologicalHistory = [...historial].sort(
+    (a, b) => new Date(a.scanned_at).getTime() - new Date(b.scanned_at).getTime(),
+  );
+  const latestScan = chronologicalHistory.at(-1);
+  const previousScan = chronologicalHistory.at(-2);
+  const changes = latestScan && previousScan
+    ? calculateScanEvents(
+      latestScan.hosts || [],
+      previousScan.hosts || [],
+      chronologicalHistory.slice(0, -2).flatMap((scan) => scan.hosts || []),
+    )
+    : { newDevices: [], absentDevices: [], returnedDevices: [], changedPorts: [] };
+  const realNewChanges = changes.newDevices.filter((host) => {
+    const device = devices.find((candidate) => candidate.mac.toUpperCase() === host.mac.toUpperCase());
+    return device ? isReallyNew(device) : false;
+  });
+  const threatDevices = devices.filter((device) => isReallyNew(device) && !device.trusted);
+  const alerts: DashboardAlert[] = threatDevices.length > 0
+    ? [{
+      type: 'danger',
+      message: `${threatDevices.length} ${threatDevices.length === 1 ? 'dispositivo nuevo' : 'dispositivos nuevos'} detectado${threatDevices.length === 1 ? '' : 's'}`,
+      action: { label: 'Revisar ahora', view: 'review' },
+    }]
+    : [];
+  const healthStyles = {
+    good: { label: 'Buena', dot: 'bg-primary' },
+    medium: { label: 'En revisión', dot: 'bg-secondary' },
+    poor: { label: 'En revisión', dot: 'bg-secondary' },
+    unknown: { label: 'Sin datos', dot: 'bg-text-muted' },
+  }[health.status];
+  const unverifiedPercentage = 100 - health.trustPercentage;
+  const selectedDevice = devices.find((device) => device.mac.toUpperCase() === selectedMac?.toUpperCase()) || null;
+  const selectedHost: Host | null = selectedDevice
+    ? latestScan?.hosts?.find((host) => host.mac.toUpperCase() === selectedDevice.mac.toUpperCase()) || {
+      ip: selectedDevice.last_ip || '',
+      hostname: selectedDevice.last_hostname,
+      mac: selectedDevice.mac,
+      vendor: selectedDevice.vendor,
+      status: selectedDevice.is_present ? 'up' : 'down',
+      names: [],
+      services: selectedDevice.services || [],
+      open_ports: selectedDevice.open_ports || [],
+      model: null,
+      device_type: selectedDevice.device_type,
+      os_hint: selectedDevice.os_hint,
+    }
+    : null;
+  const appearancesByMac = new Map<string, number>();
+  historial.forEach((scan) => {
+    const appeared = new Set((scan.hosts || []).map((host) => host.mac.toUpperCase()));
+    appeared.forEach((mac) => appearancesByMac.set(mac, (appearancesByMac.get(mac) || 0) + 1));
+  });
 
   return (
     <div className="p-8">
-      {/*  OVERLAY DE CARGA */}
       {cargando && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8 text-center max-w-sm shadow-2xl">
-            {/* Spinner */}
-            <div className="relative w-20 h-20 mx-auto mb-6">
-              <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full" />
-              <div className="absolute inset-0 border-4 border-transparent border-t-blue-500 rounded-full animate-spin" />
-              <div className="absolute inset-2 border-4 border-transparent border-t-purple-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl">📡</span>
-              </div>
-            </div>
-
-            <h3 className="text-lg font-semibold text-white mb-2">
-              Escaneando red...
-            </h3>
-            <p className="text-sm text-slate-400 mb-4">
-              Esto puede tardar unos segundos. Por favor espera.
-            </p>
-
-            {/* Barra de progreso animada */}
-            <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden relative">
-              <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 rounded-full w-1/2 animate-progress" />
-            </div>
-          </div>
-        </div>
+        <ScanProgressOverlay
+          progress={progreso}
+          target={resultado?.target || historial[0]?.target || 'Red local'}
+          startTime={startTime}
+          onCancel={cancelScanDisplay}
+        />
       )}
 
       {/* Header */}
       <div className="mb-8 flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
-          <p className="text-slate-400">Vista general del escaneo de red</p>
+          <h1 className="mb-2 text-3xl font-bold text-text">Dashboard</h1>
+          <p className="text-text-muted">Vista general del escaneo de red</p>
         </div>
-        <button
-          onClick={escanearRed}
-          disabled={cargando}
-          className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${cargando
-              ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
-        >
-          {cargando ? 'Escaneando...' : 'Iniciar escaneo'}
-        </button>
+        <div className="flex flex-col items-end gap-3">
+          <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+            backendStatus === 'online' ? 'text-primary-text' : 'text-text-muted'
+          }`}>
+            {backendStatus === 'online'
+              ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              : <CircleAlert className="h-4 w-4" aria-hidden="true" />}
+            Backend {backendStatus === 'checking' ? 'comprobando' : backendStatus === 'online' ? 'conectado' : 'no disponible'}
+          </span>
+          <Tooltip
+            position="auto"
+            content={
+              !isOnline
+                ? 'Conéctate a una red para escanear'
+                : backendStatus !== 'online'
+                  ? 'El backend no está disponible'
+                  : cargando
+                    ? 'Escaneando la red...'
+                    : 'Iniciar un escaneo de la red actual'
+            }
+          >
+            <button
+              type="button"
+              onClick={() => void escanearRed()}
+              disabled={!isOnline || backendStatus !== 'online' || cargando}
+              title={
+                !isOnline
+                  ? 'Conéctate a una red para escanear'
+                  : backendStatus !== 'online'
+                    ? 'Backend no disponible'
+                    : cargando
+                      ? 'Escaneando...'
+                      : 'Iniciar escaneo'
+              }
+              className={`rounded-lg px-6 py-3 text-sm font-medium transition-all ${
+                !isOnline || backendStatus !== 'online' || cargando
+                  ? 'cursor-not-allowed bg-surface-lighter text-text-muted'
+                  : 'bg-primary hover:bg-primary-dark text-text'
+              }`}
+            >
+              {cargando ? 'Escaneando...' : 'Iniciar escaneo'}
+            </button>
+          </Tooltip>
+        </div>
       </div>
 
       {/* Error */}
       {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm">
+        <div role="alert" className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-danger-text">
           {error}
         </div>
       )}
 
-      {/* Tarjetas */}
-      {resultado && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-          <StatCard label="Dispositivos" value={resultado.total_hosts} icon="📡" color="blue" />
-          <StatCard label="Tiempo de escaneo" value={`${resultado.duration_seconds?.toFixed(1)}s`} icon="⏱️" color="green" />
-          <StatCard label="Fabricantes únicos" value={Object.keys(fabricantes).length} icon="🏷️" color="purple" />
-          <StatCard label="Objetivo" value={resultado.target} icon="🎯" color="amber" />
-        </div>
+      {alerts.length > 0 && (
+        <section aria-label="Alertas de red" className="mb-8 space-y-3">
+          {alerts.map((alert) => {
+            const styles: Record<string, string> = {
+              danger: 'border-red-500/30 bg-red-500/10 text-danger-text',
+              warning: 'border-amber-500/30 bg-amber-500/10 text-warning-text',
+              info: 'border-cyan-500/30 bg-cyan-500/10 text-primary-light',
+            };
+            const Icon = alert.type === 'danger' ? CircleAlert : alert.type === 'warning' ? AlertTriangle : MessageCircle;
+            return (
+              <div key={alert.message} className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-sm ${styles[alert.type]}`}>
+                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>{alert.message}</span>
+                {alert.action && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (alert.action!.view === 'review') focusReviewCard();
+                      else onNavigate(alert.action!.view);
+                    }}
+                    className="ml-auto inline-flex items-center gap-1 whitespace-nowrap font-semibold underline underline-offset-2 hover:no-underline"
+                  >
+                    {alert.action.label} <span aria-hidden="true">{alert.action.view === 'review' ? '↓' : '→'}</span>
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </section>
       )}
 
-      {/* Tabla */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-        <div className="p-6 border-b border-slate-700 flex items-center justify-between">
+      <section className="mb-8 rounded-xl border border-surface-border bg-surface-light p-6">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-white">Dispositivos encontrados</h2>
-            <p className="text-sm text-slate-400 mt-1">
-              {resultado ? `${resultado.total_hosts} dispositivos en la red` : 'Sin datos aún'}
-            </p>
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-text">
+              Salud de la red
+              <GlossaryInfo termId="salud-de-la-red" />
+            </h2>
+            <p className="mt-1 text-sm text-text-muted">Confianza y disponibilidad de los dispositivos conectados</p>
           </div>
-          {resultado && (
-            <span className="text-xs font-medium bg-blue-500/10 text-blue-400 px-3 py-1.5 rounded-full border border-blue-500/20">
-              {resultado.total_hosts} dispositivos
-            </span>
-          )}
+          <span className="inline-flex items-center gap-2 rounded-full border border-surface-border bg-surface/40 px-3 py-1.5 text-sm font-semibold text-text">
+            <span className={`h-2.5 w-2.5 rounded-full ${healthStyles.dot}`} />
+            {healthStyles.label}
+          </span>
         </div>
-        <div className="p-2">
-          {resultado ? (
-            <DeviceTable hosts={resultado.hosts} />
-          ) : (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 bg-slate-700 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <svg className="w-8 h-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+        <div
+          role="img"
+          aria-label={`${healthStats.trusted} confiables y ${healthStats.untrusted} sin verificar`}
+          className="flex h-2 overflow-hidden rounded-full bg-surface-border"
+        >
+          <div
+            className="h-full bg-success transition-[width] duration-500"
+            style={{ width: `${health.trustPercentage}%` }}
+            title={`${healthStats.trusted} confiables`}
+          />
+          <div
+            className="h-full bg-secondary transition-[width] duration-500"
+            style={{ width: `${unverifiedPercentage}%` }}
+            title={`${healthStats.untrusted} sin verificar`}
+          />
+        </div>
+        <p className="mt-3 text-sm text-text-muted">
+          <strong className="text-lg font-bold text-primary">{health.trustPercentage}%</strong>
+          <span> confiables · {healthStats.trusted} confiables · {healthStats.untrusted} sin verificar</span>
+        </p>
+      </section>
+
+      <section className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-surface-border bg-surface-light p-6">
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-text">
+            Cambios desde el último escaneo
+            <GlossaryInfo termId="cambios-de-escaneo" />
+          </h2>
+          <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+            {realNewChanges.length > 0 && (
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-primary" aria-hidden="true" />
+                <span className="text-sm">
+                  <strong className="text-primary">{realNewChanges.length}</strong>
+                  <span className="ml-1 text-text-muted">{realNewChanges.length === 1 ? 'nuevo' : 'nuevos'}</span>
+                </span>
               </div>
-              <p className="text-slate-400 font-medium">No hay datos para mostrar</p>
-              <p className="text-sm text-slate-500 mt-1">Inicia un escaneo para ver los dispositivos</p>
-            </div>
-          )}
+            )}
+            {changes.absentDevices.length > 0 && (
+              <div className="flex items-center gap-2">
+                <UserMinus className="h-4 w-4 text-text-muted" aria-hidden="true" />
+                <span className="text-sm">
+                  <strong className="text-text">{changes.absentDevices.length}</strong>
+                  <span className="ml-1 text-text-muted">{changes.absentDevices.length === 1 ? 'ausente' : 'ausentes'}</span>
+                </span>
+              </div>
+            )}
+            {changes.returnedDevices.length > 0 && (
+              <div className="flex items-center gap-2">
+                <RotateCcw className="h-4 w-4 text-success" aria-hidden="true" />
+                <span className="text-sm">
+                  <strong className="text-success">{changes.returnedDevices.length}</strong>
+                  <span className="ml-1 text-text-muted">{changes.returnedDevices.length === 1 ? 'volvió' : 'volvieron'}</span>
+                </span>
+              </div>
+            )}
+            {realNewChanges.length === 0
+              && changes.absentDevices.length === 0
+              && changes.returnedDevices.length === 0 && (
+                <span className="text-sm text-text-muted">Sin cambios desde el último escaneo</span>
+              )}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onNavigate('history')}
+          className="rounded-lg px-3 py-2 text-sm font-medium text-primary-light transition-colors hover:bg-surface-lighter"
+        >
+          Ver historial completo <span aria-hidden="true">→</span>
+        </button>
+      </section>
+
+      <div className="mb-8 grid gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-surface-border bg-surface-light p-5">
+          <div className="text-sm font-medium text-text-muted">
+            <GlossaryInfo termId="ultimo-escaneo" label="Último escaneo" />
+          </div>
+          <p className="mt-2 text-xl font-semibold text-text">
+            {resultado ? formatRelativeTime(resultado.scanned_at) : 'Sin escaneos'}
+          </p>
+        </div>
+        <div className="rounded-xl border border-surface-border bg-surface-light p-5">
+          <div className="text-sm font-medium text-text-muted">
+            <GlossaryInfo termId="red-escaneada" label="Red escaneada" />
+          </div>
+          <p className="mt-2 break-all font-mono text-lg font-semibold text-text">
+            {resultado?.target || 'Sin datos'}
+          </p>
         </div>
       </div>
+
+      <ReviewCard
+        devices={devices}
+        loading={devicesLoading}
+        error={devicesLoadError}
+        onRetry={() => void handleRetryDevices()}
+        onOpenDevice={(device) => setSelectedMac(device.mac)}
+        onMarkTrusted={handleMarkTrusted}
+        onViewAll={navigateToUnverified}
+        onSectionRef={(element) => { reviewCardRef.current = element; }}
+      />
+
+      {selectedDevice && selectedHost && (
+        <DeviceDetailModal
+          host={selectedHost}
+          device={selectedDevice}
+          appearanceCount={appearancesByMac.get(selectedDevice.mac.toUpperCase())}
+          onClose={() => setSelectedMac(null)}
+          onSetAlias={async (device, alias) => {
+            const updated = await updateDevice(device.mac, { alias });
+            setDevices((current) => current.map((item) => (
+              item.mac.toUpperCase() === updated.mac.toUpperCase() ? { ...item, ...updated } : item
+            )));
+          }}
+          onToggleTrusted={handleToggleTrusted}
+        />
+      )}
+
+      {undoDevice && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-5 right-4 z-40 flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-lg border border-surface-border bg-surface-light px-4 py-3 text-sm text-text shadow-lg"
+        >
+          <span>Dispositivo marcado como confiable</span>
+          <button
+            type="button"
+            onClick={() => void undoMarkTrusted()}
+            className="inline-flex shrink-0 items-center gap-1 font-semibold text-primary-text underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          >
+            <Undo2 className="h-4 w-4" aria-hidden="true" />
+            Deshacer
+          </button>
+        </div>
+      )}
     </div>
   );
 }

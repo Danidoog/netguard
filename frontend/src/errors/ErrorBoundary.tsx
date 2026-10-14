@@ -37,12 +37,12 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-8">
-          <div className="bg-slate-800 border border-red-500/30 rounded-xl p-8 max-w-lg w-full">
+        <div className="flex min-h-screen items-center justify-center bg-surface p-8">
+          <div className="w-full max-w-lg rounded-xl border border-red-500/30 bg-surface-light p-8">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-red-400"
+                  className="w-6 h-6 text-danger-text"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -55,20 +55,20 @@ export class ErrorBoundary extends Component<Props, State> {
                   />
                 </svg>
               </div>
-              <h1 className="text-xl font-bold text-white">Algo salió mal</h1>
+              <h1 className="text-xl font-bold text-text">Algo salió mal</h1>
             </div>
 
-            <p className="text-slate-400 mb-4">
+            <p className="mb-4 text-text-muted">
               Ocurrió un error inesperado en la aplicación. Puedes intentar
               recargar la página.
             </p>
 
             {this.state.error && (
               <details className="mb-4 text-xs">
-                <summary className="text-slate-500 cursor-pointer hover:text-slate-400">
+                <summary className="cursor-pointer text-text-muted hover:text-text">
                   Ver detalles técnicos
                 </summary>
-                <pre className="mt-2 p-3 bg-slate-900 rounded-lg text-red-400 overflow-auto max-h-40">
+                <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-surface p-3 text-danger-text">
                   {this.state.error.toString()}
                 </pre>
               </details>
@@ -76,7 +76,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <button
               onClick={() => window.location.reload()}
-              className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+              className="w-full px-4 py-2.5 bg-primary-dark hover:bg-primary text-white rounded-lg font-medium transition-colors"
             >
               Recargar página
             </button>

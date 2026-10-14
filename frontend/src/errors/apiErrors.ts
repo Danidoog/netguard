@@ -1,7 +1,6 @@
-// src/errors/apiErrors.ts
-
 export type ErrorType =
   | 'NETWORK_ERROR'
+  | 'PARSE_ERROR'
   | 'NOT_FOUND'
   | 'SERVER_ERROR'
   | 'TIMEOUT'
@@ -9,17 +8,17 @@ export type ErrorType =
   | 'UNKNOWN';
 
 export class ApiError extends Error {
-  type: ErrorType;
-  statusCode?: number;
-  code?: string;
-  originalError?: unknown;
+  public readonly type: ErrorType;
+  public readonly statusCode?: number;
+  public readonly code?: string;
+  public readonly originalError?: unknown;
 
   constructor(
     message: string,
     type: ErrorType,
     statusCode?: number,
     code?: string,
-    originalError?: unknown
+    originalError?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -30,98 +29,91 @@ export class ApiError extends Error {
   }
 }
 
-//  Extrae el mensaje del error del backend
-function extractErrorMessage(data: any): { message: string; code?: string } {
-  // Formato NetGuardError: { error: { code, message } }
-  if (data?.error?.message) {
-    return { message: data.error.message, code: data.error.code };
-  }
-  // Formato FastAPI: { detail: "..." }
-  if (data?.detail) {
-    if (typeof data.detail === 'string') return { message: data.detail };
-    if (Array.isArray(data.detail) && data.detail[0]?.msg) {
-      return { message: data.detail[0].msg };
-    }
-  }
-  // Formato simple: { message: "..." }
-  if (data?.message) return { message: data.message };
-  return { message: '' };
-}
-
-export function handleApiError(error: unknown): ApiError {
-  if (error instanceof ApiError) return error;
-  if (error instanceof TypeError && error.message.includes('fetch')) {
-    return new ApiError(
+export class NetworkError extends ApiError {
+  constructor(originalError?: unknown) {
+    super(
       'No se pudo conectar con el servidor. Verifica que el backend esté corriendo.',
       'NETWORK_ERROR',
-      undefined, undefined, error
+      undefined,
+      undefined,
+      originalError,
     );
+    this.name = 'NetworkError';
   }
-  return new ApiError('Ocurrió un error inesperado.', 'UNKNOWN', undefined, undefined, error);
 }
 
-// ✅ Procesa la respuesta de error del backend
+export class ParseError extends ApiError {
+  constructor(originalError?: unknown) {
+    super('El servidor devolvió una respuesta inválida.', 'PARSE_ERROR', undefined, undefined, originalError);
+    this.name = 'ParseError';
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function extractErrorMessage(data: unknown): { message: string; code?: string } {
+  if (!isRecord(data)) return { message: '' };
+  const error = data.error;
+  if (isRecord(error)) {
+    const message = stringValue(error.message);
+    if (message) return { message, code: stringValue(error.code) };
+  }
+  const detail = data.detail;
+  if (typeof detail === 'string') return { message: detail };
+  if (Array.isArray(detail) && detail.length > 0 && isRecord(detail[0])) {
+    const message = stringValue(detail[0].msg);
+    if (message) return { message };
+  }
+  return { message: stringValue(data.message) || '' };
+}
+
 export async function processErrorResponse(response: Response): Promise<ApiError> {
-  let data: any = {};
+  let body: unknown;
   try {
     const text = await response.text();
-    // Intentar parsear como JSON
     try {
-      data = JSON.parse(text);
+      body = JSON.parse(text) as unknown;
     } catch {
-      // No es JSON, es HTML o texto plano
-      data = { message: text.substring(0, 200) };
+      body = { message: text.substring(0, 200) };
     }
   } catch {
-    data = {};
+    body = {};
   }
 
-  const { message, code } = extractErrorMessage(data);
-
-  // ✅ Mensajes amigables según status HTTP
+  const { message, code } = extractErrorMessage(body);
   let type: ErrorType = 'UNKNOWN';
-  let friendlyMessage = '';
+  let fallbackMessage: string;
 
   switch (response.status) {
     case 400:
       type = 'VALIDATION_ERROR';
-      friendlyMessage = 'Los datos enviados no son válidos.';
+      fallbackMessage = 'Los datos enviados no son válidos.';
       break;
     case 404:
       type = 'NOT_FOUND';
-      friendlyMessage = 'El recurso solicitado no existe.';
+      fallbackMessage = 'El recurso solicitado no existe.';
       break;
     case 502:
     case 503:
     case 504:
       type = 'SERVER_ERROR';
-      friendlyMessage = 'No se pudo conectar con el servidor. Verifica que el backend esté corriendo.';
+      fallbackMessage = 'No se pudo conectar con el servidor. Verifica que el backend esté corriendo.';
       break;
     default:
       if (response.status >= 500) {
         type = 'SERVER_ERROR';
-        friendlyMessage = 'El servidor tuvo un problema. Intenta más tarde.';
+        fallbackMessage = 'El servidor tuvo un problema. Intenta más tarde.';
       } else {
-        friendlyMessage = 'Ocurrió un error inesperado.';
+        fallbackMessage = 'Ocurrió un error inesperado.';
       }
   }
 
-  // ✅ Si el backend envió un mensaje específico, usarlo. Si no, usar el amigable.
-  const finalMessage = message && message !== 'Bad Gateway' ? message : friendlyMessage;
-
-  return new ApiError(
-    finalMessage,
-    type,
-    response.status,
-    code
-  );
+  const finalMessage = message && message !== 'Bad Gateway' ? message : fallbackMessage;
+  return new ApiError(finalMessage, type, response.status, code);
 }
-
-export const ERROR_MESSAGES: Record<ErrorType, string> = {
-  NETWORK_ERROR: 'No se pudo conectar con el servidor.',
-  NOT_FOUND: 'El recurso solicitado no existe.',
-  SERVER_ERROR: 'Error en el servidor. Intenta más tarde.',
-  TIMEOUT: 'La operación tardó demasiado.',
-  VALIDATION_ERROR: 'Los datos no son válidos.',
-  UNKNOWN: 'Ocurrió un error inesperado.',
-};
