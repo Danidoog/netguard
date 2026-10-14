@@ -7,6 +7,8 @@ export interface Device {
   vendor: string | null;
   device_type: string | null;
   os_hint: string | null;
+  open_ports?: number[];
+  services?: string[];
   first_seen: string;
   last_seen: string;
   is_present: boolean;
@@ -14,6 +16,6 @@ export interface Device {
 }
 
 export interface DeviceUpdate {
-  alias?: string;
-  trusted?: boolean;
+  alias?: string | null;
+  trusted?: boolean | null;
 }

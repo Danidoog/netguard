@@ -1,433 +1,567 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getScanHistory, getScanHosts } from '../api/scans';
-import { getDevices } from '../api/devices';
-import type { Host, ScanHistoryItem } from '../types/scan.types';
-import type { Device } from '../types/device.types';
-import type { EventType, HistoryEvent } from '../types/history.types';
-import { buildHistoryEvents } from '../utils/historyEvents';
+import { ChevronDown, ChevronRight, Search } from 'lucide-react';
+import { getAllScanHistory, getScanDetail, getScanHosts } from '../api/scans';
+import { getDevices, updateDevice } from '../api/devices';
 import { ApiError } from '../errors/apiErrors';
+import { CollapsibleDay } from '../components/CollapsibleDay';
+import { ScanDetailModal } from '../components/ScanDetailModal';
+import { ScanHistoryItem, type ScanEvents } from '../components/ScanHistoryItem';
+import type { Host, ScanHistoryItem as ScanRecord } from '../types/scan.types';
+import type { Device, DeviceUpdate } from '../types/device.types';
+import { exportHistory } from '../utils/exportHistory';
+import { calculateScanEvents, calculateScanEventsForHistory } from '../utils/scanEvents';
+import { formatTime } from '../utils/format';
 
-type TypeFilter = 'all' | EventType;
-type CardFilter = 'new' | 'new_untrusted' | 'absent';
-type DateFilter = 'all' | 'today' | '7d' | '30d';
+type ChangeFilter = 'all' | 'new' | 'absent' | 'returned';
 
-function formatRelativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return 'Fecha desconocida';
-  const sec = Math.max(0, Math.floor((Date.now() - then) / 1000));
-  if (sec < 45) return 'hace un momento';
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `hace ${min} min`;
-  const hours = Math.floor(min / 60);
-  if (hours < 24) return hours === 1 ? 'hace 1h' : `hace ${hours}h`;
-  const days = Math.floor(hours / 24);
-  return days === 1 ? 'hace 1 día' : `hace ${days} días`;
+interface DayGroup {
+  key: string;
+  title: string;
+  scans: ScanRecord[];
 }
 
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+type DayEntry =
+  | { kind: 'scan'; scan: ScanRecord }
+  | { kind: 'unchanged'; scans: ScanRecord[] };
+
+const EMPTY_EVENTS: ScanEvents = {
+  newDevices: [],
+  absentDevices: [],
+  returnedDevices: [],
+  changedPorts: [],
+};
+
+function dateObjectKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
-function dayLabel(iso: string): string {
-  const day = startOfLocalDay(new Date(iso));
-  const today = startOfLocalDay(new Date());
-  const diff = Math.round((today.getTime() - day.getTime()) / 86_400_000);
-  if (diff === 0) return 'Hoy';
-  if (diff === 1) return 'Ayer';
-  if (diff === 2) return 'Hace 2 días';
-  return day.toLocaleDateString('es-ES', {
+function localDateKey(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'unknown' : dateObjectKey(date);
+}
+
+function dayTitle(dateKey: string): string {
+  if (dateKey === 'unknown') return 'Fecha no disponible';
+
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const label = new Intl.DateTimeFormat('es-ES', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
-  });
+  }).format(date);
+
+  if (dateKey === dateObjectKey(today)) return `Hoy · ${label}`;
+  if (dateKey === dateObjectKey(yesterday)) return `Ayer · ${label}`;
+  return label;
 }
 
-function dayKey(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+function groupByDay(scans: ScanRecord[]): DayGroup[] {
+  const groups = new Map<string, ScanRecord[]>();
+  for (const scan of scans) {
+    const key = localDateKey(scan.scanned_at);
+    const group = groups.get(key);
+    if (group) group.push(scan);
+    else groups.set(key, [scan]);
+  }
+
+  return [...groups.entries()]
+    .map(([key, groupScans]) => ({
+      key,
+      title: dayTitle(key),
+      scans: [...groupScans].sort((a, b) => (
+        new Date(b.scanned_at).getTime() - new Date(a.scanned_at).getTime()
+      )),
+    }))
+    .sort((a, b) => {
+      if (a.key === 'unknown') return 1;
+      if (b.key === 'unknown') return -1;
+      return b.key.localeCompare(a.key);
+    });
 }
 
-function matchesSearch(event: HistoryEvent, query: string): boolean {
-  if (!query) return true;
-  const haystack = [
-    event.device.mac,
-    event.device.ip,
-    event.device.hostname,
-    event.device.vendor,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-  return haystack.includes(query);
+function hasChange(events: ScanEvents, filter: ChangeFilter): boolean {
+  if (filter === 'new') return events.newDevices.length > 0;
+  if (filter === 'absent') return events.absentDevices.length > 0;
+  if (filter === 'returned') return events.returnedDevices.length > 0;
+  return true;
 }
 
-const EVENT_META: Record<
-  EventType,
-  { icon: string; label: string; accent: string; badge: string }
-> = {
-  new: {
-    icon: '🆕',
-    label: 'Nuevo',
-    accent: 'border-blue-500/30 bg-blue-500/5',
-    badge: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  },
-  new_untrusted: {
-    icon: '⚠️',
-    label: 'Nuevo',
-    accent: 'border-amber-500/30 bg-amber-500/5',
-    badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  },
-  absent: {
-    icon: '⚪',
-    label: 'Ausente',
-    accent: 'border-slate-600/40 bg-slate-700/20',
-    badge: 'bg-slate-600/20 text-slate-300 border-slate-500/30',
-  },
-  cameback: {
-    icon: '✅',
-    label: 'Regresó',
-    accent: 'border-emerald-500/30 bg-emerald-500/5',
-    badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  },
-};
+function getDayEntries(scans: ScanRecord[], eventsByScanId: Record<number, ScanEvents>): DayEntry[] {
+  const entries: DayEntry[] = [];
+  let unchangedRun: ScanRecord[] = [];
+  const flushUnchanged = () => {
+    if (unchangedRun.length > 1) entries.push({ kind: 'unchanged', scans: unchangedRun });
+    else if (unchangedRun.length === 1) entries.push({ kind: 'scan', scan: unchangedRun[0] });
+    unchangedRun = [];
+  };
 
-const TYPE_OPTIONS: { id: TypeFilter; label: string }[] = [
-  { id: 'all', label: 'Todos los eventos' },
-  { id: 'new', label: 'Nuevos' },
-  { id: 'new_untrusted', label: 'No confiables' },
-  { id: 'absent', label: 'Ausentes' },
-];
+  for (const scan of scans) {
+    const events = eventsByScanId[scan.id] || EMPTY_EVENTS;
+    const changed = events.newDevices.length
+      + events.absentDevices.length
+      + events.returnedDevices.length
+      + events.changedPorts.length > 0;
+    if (changed) {
+      flushUnchanged();
+      entries.push({ kind: 'scan', scan });
+    } else {
+      unchangedRun.push(scan);
+    }
+  }
+  flushUnchanged();
+  return entries;
+}
 
-const DATE_OPTIONS: { id: DateFilter; label: string }[] = [
-  { id: 'all', label: 'Todas las fechas' },
-  { id: 'today', label: 'Hoy' },
-  { id: '7d', label: 'Últimos 7 días' },
-  { id: '30d', label: 'Últimos 30 días' },
-];
+function UnchangedScansRow({ scans, expanded, onToggle, onOpen }: {
+  scans: ScanRecord[];
+  expanded: boolean;
+  onToggle: () => void;
+  onOpen: (scan: ScanRecord) => void;
+}) {
+  const counts = new Set(scans.map((scan) => scan.total_hosts));
+  const countLabel = counts.size === 1
+    ? `${scans[0].total_hosts} ${scans[0].total_hosts === 1 ? 'dispositivo' : 'dispositivos'} en todos`
+    : `${Math.min(...counts)}–${Math.max(...counts)} dispositivos`;
+
+  return (
+    <div>
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={onToggle}
+        className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-4 text-left transition-colors hover:bg-surface-lighter focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:px-5"
+      >
+        {expanded
+          ? <ChevronDown className="h-4 w-4 shrink-0 text-text-muted" aria-hidden="true" />
+          : <ChevronRight className="h-4 w-4 shrink-0 text-text-muted" aria-hidden="true" />}
+        <span className="font-medium text-text">{scans.length} escaneos sin cambios</span>
+        <span className="text-sm text-text-muted">
+          {formatTime(scans[scans.length - 1].scanned_at)} - {formatTime(scans[0].scanned_at)} · {countLabel}
+        </span>
+        <span className="ml-auto text-sm font-medium text-primary">{expanded ? 'Ocultar' : 'Mostrar'}</span>
+      </button>
+      {expanded && scans.map((scan) => (
+        <ScanHistoryItem key={scan.id} scan={scan} events={EMPTY_EVENTS} onOpen={onOpen} />
+      ))}
+    </div>
+  );
+}
 
 export function History() {
-  const [historial, setHistorial] = useState<ScanHistoryItem[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const [history, setHistory] = useState<ScanRecord[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busqueda, setBusqueda] = useState('');
-  const [tipoFiltro, setTipoFiltro] = useState<TypeFilter>('all');
-  const [fechaFiltro, setFechaFiltro] = useState<DateFilter>('all');
+  const [search, setSearch] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+  const [changeFilter, setChangeFilter] = useState<ChangeFilter>('all');
+  const [selectedScan, setSelectedScan] = useState<ScanRecord | null>(null);
+  const [detailHosts, setDetailHosts] = useState<Host[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [compareFromId, setCompareFromId] = useState('');
+  const [compareToId, setCompareToId] = useState('');
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [expandedRuns, setExpandedRuns] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let cancelled = false;
 
-    const cargarHistorial = async () => {
-      setCargando(true);
-      setError(null);
+    async function loadHistory() {
       try {
-        const datos = await getScanHistory();
-        const escaneos = datos
-          .slice()
-          .sort((a, b) => {
-            const time = new Date(a.scanned_at).getTime() - new Date(b.scanned_at).getTime();
-            return time !== 0 ? time : a.id - b.id;
-          })
-          .slice(-10);
-
-        let hostsPorEscaneo: Host[][] = [];
-        let dispositivos: Device[] = [];
-        if (escaneos.length > 1) {
-          [hostsPorEscaneo, dispositivos] = await Promise.all([
-            Promise.all(escaneos.map((scan) => getScanHosts(scan.id))),
-            getDevices(),
-          ]);
+        const scans = await getAllScanHistory();
+        if (!cancelled) {
+          setHistory(scans);
         }
-
-        const confianzaPorMac = new Map<string, boolean>(
-          dispositivos.map((device): [string, boolean] => [
-            device.mac.toLowerCase(),
-            device.trusted,
-          ])
-        );
-        const escaneosConHosts = escaneos.map((scan, index) => ({
-          ...scan,
-          hosts: (hostsPorEscaneo[index] ?? []).map((host) => ({
-            ...host,
-            trusted: confianzaPorMac.get(host.mac.toLowerCase()),
-          })),
-        }));
-
-        if (!cancelled) setHistorial(escaneosConHosts);
       } catch (err) {
-        if (cancelled) return;
-        if (err instanceof ApiError) {
-          setError(err.message);
-        } else {
-          setError('No se pudo cargar el historial');
+        if (!cancelled) {
+          setError(err instanceof ApiError ? err.message : 'No se pudo cargar el historial.');
+          console.error('Error cargando el historial de escaneos:', err);
         }
-        console.error(err);
       } finally {
-        if (!cancelled) setCargando(false);
+        if (!cancelled) setLoading(false);
       }
-    };
+    }
 
-    void cargarHistorial();
+    void loadHistory();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const eventos = useMemo(() => buildHistoryEvents(historial), [historial]);
-
-  const query = busqueda.trim().toLowerCase();
-  const hayFiltros = query.length > 0 || tipoFiltro !== 'all' || fechaFiltro !== 'all';
-
-  const eventosFiltrados = useMemo(() => {
-    return eventos.filter((event) => {
-      if (tipoFiltro !== 'all' && event.type !== tipoFiltro) return false;
-      if (!matchesSearch(event, query)) return false;
-      if (fechaFiltro !== 'all') {
-        const local = new Date(event.timestamp);
-        if (Number.isNaN(local.getTime())) return false;
-        const now = new Date();
-        if (fechaFiltro === 'today') {
-          if (local < startOfLocalDay(now)) return false;
-        } else {
-          const days = fechaFiltro === '7d' ? 7 : 30;
-          if (local.getTime() < now.getTime() - days * 86_400_000) return false;
+  useEffect(() => {
+    let cancelled = false;
+    getDevices()
+      .then((data) => {
+        if (!cancelled) setDevices(data);
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled) {
+          console.error('No se pudo cargar el inventario para acciones del historial:', cause);
+          setError((current) => current || 'El inventario no está disponible; las acciones de alias y confianza están deshabilitadas.');
         }
-      }
-      return true;
-    });
-  }, [eventos, tipoFiltro, query, fechaFiltro]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const grupos = useMemo(() => {
-    const map = new Map<string, { key: string; label: string; events: HistoryEvent[] }>();
-    for (const event of eventosFiltrados) {
-      const key = dayKey(event.timestamp);
-      const existing = map.get(key);
-      if (existing) {
-        existing.events.push(event);
-      } else {
-        map.set(key, { key, label: dayLabel(event.timestamp), events: [event] });
-      }
-    }
-    return [...map.values()];
-  }, [eventosFiltrados]);
-
-  const counts = useMemo(
-    () => ({
-      new: eventos.filter((e) => e.type === 'new').length,
-      new_untrusted: eventos.filter((e) => e.type === 'new_untrusted').length,
-      absent: eventos.filter((e) => e.type === 'absent').length,
-    }),
-    [eventos]
+  const eventsByScanId = useMemo(() => calculateScanEventsForHistory(history), [history]);
+  const chronologicalHistory = useMemo(
+    () => [...history].sort((a, b) => new Date(a.scanned_at).getTime() - new Date(b.scanned_at).getTime() || a.id - b.id),
+    [history],
   );
 
-  const limpiarFiltros = () => {
-    setBusqueda('');
-    setTipoFiltro('all');
-    setFechaFiltro('all');
+  const latestFirst = [...chronologicalHistory].reverse();
+  const effectiveCompareFromId = compareFromId || String(latestFirst[1]?.id ?? '');
+  const effectiveCompareToId = compareToId || String(latestFirst[0]?.id ?? '');
+
+  const comparison = useMemo(() => {
+    const previous = history.find((scan) => String(scan.id) === effectiveCompareFromId);
+    const current = history.find((scan) => String(scan.id) === effectiveCompareToId);
+    if (!previous || !current || previous.id === current.id) return null;
+    const priorScans = chronologicalHistory.filter(
+      (scan) => new Date(scan.scanned_at).getTime() < new Date(previous.scanned_at).getTime(),
+    );
+    return {
+      previous,
+      current,
+      events: calculateScanEvents(
+        current.hosts || [],
+        previous.hosts || [],
+        priorScans.flatMap((scan) => scan.hosts || []),
+      ),
+    };
+  }, [effectiveCompareFromId, effectiveCompareToId, history, chronologicalHistory]);
+  const comparisonSummary = useMemo(() => {
+    if (!comparison) return null;
+    const parts: string[] = [];
+    const labelHost = (host: Host) => {
+      const alias = devices.find((device) => device.mac.toUpperCase() === host.mac.toUpperCase())?.alias;
+      return alias?.trim() || host.hostname || host.ip;
+    };
+    const { events } = comparison;
+    if (events.returnedDevices.length) {
+      parts.push(`${events.returnedDevices.length} ${events.returnedDevices.length === 1 ? 'volvió' : 'volvieron'} · ${events.returnedDevices.map(labelHost).join(', ')}`);
+    }
+    if (events.newDevices.length) {
+      parts.push(`${events.newDevices.length} ${events.newDevices.length === 1 ? 'nuevo' : 'nuevos'} · ${events.newDevices.map(labelHost).join(', ')}`);
+    }
+    if (events.absentDevices.length) {
+      parts.push(`${events.absentDevices.length} ${events.absentDevices.length === 1 ? 'ausente' : 'ausentes'} · ${events.absentDevices.map(labelHost).join(', ')}`);
+    }
+    if (events.changedPorts.length) {
+      parts.push(`${events.changedPorts.length} ${events.changedPorts.length === 1 ? 'cambio' : 'cambios'} de puertos`);
+    }
+    const previousByMac = new Map((comparison.previous.hosts || []).map((host) => [host.mac.toUpperCase(), host]));
+    const changedIpHosts = (comparison.current.hosts || []).filter((host) => {
+      const previous = previousByMac.get(host.mac.toUpperCase());
+      return previous && previous.ip !== host.ip;
+    });
+    if (changedIpHosts.length) {
+      parts.push(`${changedIpHosts.length} ${changedIpHosts.length === 1 ? 'cambio' : 'cambios'} de IP · ${changedIpHosts.map(labelHost).join(', ')}`);
+    }
+    return parts.length ? parts.join(' · ') : 'Sin nuevos, ausentes ni cambios de puertos.';
+  }, [comparison, devices]);
+  const dateOptions = useMemo(() => [...new Set(history.map((scan) => localDateKey(scan.scanned_at)))]
+    .filter((key) => key !== 'unknown')
+    .sort((a, b) => b.localeCompare(a)), [history]);
+
+  const filteredGroups = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase('es');
+    const filtered = history.filter((scan) => {
+      const matchesSearch = !normalizedSearch
+        || scan.target.toLocaleLowerCase('es').includes(normalizedSearch)
+        || (scan.hosts || []).some((host) => {
+          const alias = devices.find((device) => device.mac.toUpperCase() === host.mac.toUpperCase())?.alias;
+          return [alias, host.hostname, host.ip, host.mac, host.vendor, ...host.names]
+            .some((value) => value?.toLocaleLowerCase('es').includes(normalizedSearch));
+        });
+      const matchesDate = !dateFilter || localDateKey(scan.scanned_at) === dateFilter;
+      const matchesChange = hasChange(
+        eventsByScanId[scan.id] || { newDevices: [], absentDevices: [], returnedDevices: [], changedPorts: [] },
+        changeFilter,
+      );
+      return matchesSearch && matchesDate && matchesChange;
+    });
+    return groupByDay(filtered);
+  }, [history, search, dateFilter, changeFilter, eventsByScanId, devices]);
+
+  const visibleCount = filteredGroups.reduce((count, group) => count + group.scans.length, 0);
+
+  const openDetailFromList = (scan: ScanRecord) => void openDetail(scan);
+  const toggleUnchangedRun = (scans: ScanRecord[]) => {
+    const key = `${scans[0].id}:${scans[scans.length - 1].id}`;
+    setExpandedRuns((current) => ({ ...current, [key]: !current[key] }));
   };
 
-  const seleccionarTarjeta = (tipo: CardFilter) => {
-    setTipoFiltro((prev) => (prev === tipo ? 'all' : tipo));
+  const handleExport = async (format: 'csv' | 'json') => {
+    try {
+      const allScans = await getAllScanHistory();
+      exportHistory(allScans, format, Object.fromEntries(
+        allScans.map((scan) => [scan.id, scan.hosts || []]),
+      ));
+      setExportMenuOpen(false);
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : 'No se pudo exportar el historial.');
+    }
   };
 
-  const cardClass = (tipo: CardFilter) =>
-    `bg-slate-800 border rounded-xl p-5 text-left transition-colors ${
-      tipoFiltro === tipo
-        ? 'border-blue-500 ring-1 ring-blue-500/40'
-        : 'border-slate-700 hover:border-slate-500'
-    }`;
+  const openDetail = async (scan: ScanRecord) => {
+    setSelectedScan(scan);
+    setDetailHosts(scan.hosts || []);
+    setDetailError(null);
+    setDetailLoading(true);
+
+    try {
+      const [detail, hosts] = await Promise.all([
+        getScanDetail(scan.id),
+        getScanHosts(scan.id),
+      ]);
+      setSelectedScan((current) => current?.id === scan.id
+        ? { ...current, ...detail, hosts }
+        : current);
+      setDetailHosts(hosts);
+    } catch (err) {
+      setDetailError(err instanceof ApiError ? err.message : 'No se pudo cargar el detalle del escaneo.');
+      console.error(`Error cargando el escaneo ${scan.id}:`, err);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeDetail = () => {
+    setSelectedScan(null);
+    setDetailHosts([]);
+    setDetailLoading(false);
+    setDetailError(null);
+  };
+
+  const handleDeviceUpdate = async (mac: string, data: DeviceUpdate) => {
+    try {
+      const updated = await updateDevice(mac, data);
+      setDevices((current) => current.map((device) => device.mac.toUpperCase() === mac.toUpperCase()
+        ? { ...device, ...updated }
+        : device));
+    } catch (cause) {
+      console.error(`No se pudo actualizar el dispositivo ${mac}:`, cause);
+      setDetailError(cause instanceof ApiError ? cause.message : 'No se pudo actualizar el dispositivo.');
+      throw cause;
+    }
+  };
+
+  const handleDeviceUpdateSafely = async (mac: string, data: DeviceUpdate) => {
+    try {
+      await handleDeviceUpdate(mac, data);
+    } catch {
+      // The modal displays the API error in its detail alert.
+    }
+  };
+
+  const clearFilters = () => {
+    setSearch('');
+    setDateFilter('');
+    setChangeFilter('all');
+  };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Historial</h1>
-        <p className="text-slate-400">Eventos detectados en tus escaneos</p>
-      </div>
+    <main className="min-h-screen bg-surface p-5 text-text sm:p-8">
+      <div className="w-full">
+        <header className="mb-7">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold">Historial</h1>
+              <p className="mt-1 text-sm text-text-muted">
+                {history.length} {history.length === 1 ? 'escaneo' : 'escaneos'}
+              </p>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-6">
-        <button
-          type="button"
-          aria-pressed={tipoFiltro === 'new'}
-          onClick={() => seleccionarTarjeta('new')}
-          className={cardClass('new')}
-        >
-          <p className="text-sm text-slate-400 font-medium">🆕 Nuevos</p>
-          <p className="text-3xl font-bold text-blue-400 mt-1">{counts.new}</p>
-        </button>
-        <button
-          type="button"
-          aria-pressed={tipoFiltro === 'new_untrusted'}
-          onClick={() => seleccionarTarjeta('new_untrusted')}
-          className={cardClass('new_untrusted')}
-        >
-          <p className="text-sm text-slate-400 font-medium">⚠️ No confiables</p>
-          <p className="text-3xl font-bold text-amber-400 mt-1">{counts.new_untrusted}</p>
-        </button>
-        <button
-          type="button"
-          aria-pressed={tipoFiltro === 'absent'}
-          onClick={() => seleccionarTarjeta('absent')}
-          className={cardClass('absent')}
-        >
-          <p className="text-sm text-slate-400 font-medium">⚪ Ausentes</p>
-          <p className="text-3xl font-bold text-slate-200 mt-1">{counts.absent}</p>
-        </button>
-      </div>
-
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[220px]">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          <label className="relative block">
+            <span className="sr-only">Buscar por dispositivo, alias, hostname, IP o MAC</span>
+            <Search aria-hidden="true" className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar por dispositivo (alias, hostname, IP o MAC)"
+              className="w-full rounded-xl border border-surface-border bg-surface-light py-4 pl-12 pr-4 text-base text-text shadow-sm placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
-          </svg>
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por MAC, IP, hostname o fabricante..."
-            aria-label="Buscar eventos por MAC, IP, hostname o fabricante"
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
-          />
-        </div>
+          </label>
+        </header>
 
-        <select
-          value={tipoFiltro}
-          onChange={(e) => setTipoFiltro(e.target.value as TypeFilter)}
-          className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
-        >
-          {TYPE_OPTIONS.map((opt) => (
-            <option key={opt.id} value={opt.id}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <section aria-label="Filtros del historial" className="mb-6 flex flex-wrap items-center gap-3">
+          <label className="text-sm text-text-muted">
+            <span className="sr-only">Filtrar por fecha</span>
+            <select
+              value={dateFilter}
+              onChange={(event) => setDateFilter(event.target.value)}
+              className="rounded-lg border border-surface-border bg-surface-light px-3 py-2.5 text-sm text-text focus:border-primary focus:outline-none"
+            >
+              <option value="">Todas las fechas</option>
+              {dateOptions.map((date) => (
+                <option key={date} value={date}>{dayTitle(date)}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm text-text-muted">
+            <span className="sr-only">Filtrar por tipo de cambio</span>
+            <select
+              value={changeFilter}
+              onChange={(event) => setChangeFilter(event.target.value as ChangeFilter)}
+              className="rounded-lg border border-surface-border bg-surface-light px-3 py-2.5 text-sm text-text focus:border-primary focus:outline-none"
+            >
+              <option value="all">Todos los cambios</option>
+              <option value="new">Con dispositivos nuevos</option>
+              <option value="absent">Con dispositivos ausentes</option>
+              <option value="returned">Con dispositivos que volvieron</option>
+            </select>
+          </label>
+          <div className="relative">
+            <button
+              type="button"
+              aria-expanded={exportMenuOpen}
+              aria-haspopup="menu"
+              onClick={() => setExportMenuOpen((open) => !open)}
+              disabled={history.length === 0}
+              className="rounded-lg border border-primary/30 px-3 py-2.5 text-sm font-medium text-primary-light hover:bg-primary/10 disabled:opacity-50"
+            >
+              Exportar
+            </button>
+            {exportMenuOpen && (
+              <div role="menu" aria-label="Formato de exportación" className="absolute right-0 z-20 mt-1 w-36 rounded-lg border border-surface-border bg-surface-light p-1 shadow-lg">
+                <button type="button" role="menuitem" onClick={() => void handleExport('csv')} className="w-full rounded px-3 py-2 text-left text-sm text-text hover:bg-surface-lighter">CSV</button>
+                <button type="button" role="menuitem" onClick={() => void handleExport('json')} className="w-full rounded px-3 py-2 text-left text-sm text-text hover:bg-surface-lighter">JSON</button>
+              </div>
+            )}
+          </div>
+          {(search || dateFilter || changeFilter !== 'all') && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="rounded-lg px-3 py-2.5 text-sm text-primary-light transition-colors hover:bg-surface-light hover:text-primary-text"
+            >
+              Limpiar filtros
+            </button>
+          )}
+          {!loading && (
+            <span className="ml-auto text-sm text-text-muted">
+              {visibleCount} {visibleCount === 1 ? 'resultado' : 'resultados'} · {history.length} {history.length === 1 ? 'escaneo' : 'escaneos'}
+            </span>
+          )}
+        </section>
 
-        <select
-          value={fechaFiltro}
-          onChange={(e) => setFechaFiltro(e.target.value as DateFilter)}
-          aria-label="Filtrar por fecha"
-          className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
-        >
-          {DATE_OPTIONS.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-
-        {hayFiltros && (
-          <button
-            type="button"
-            onClick={limpiarFiltros}
-            className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-sm text-slate-300 transition-colors"
-          >
-            Limpiar filtros
-          </button>
+        {chronologicalHistory.length >= 2 && (
+          <section aria-label="Comparar escaneos" className="mb-6 rounded-xl border border-surface-border bg-surface-light p-5">
+            <h2 className="mb-3 font-semibold text-text">Comparar escaneos</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-sm text-text-muted">
+                Escaneo base
+                <select value={effectiveCompareFromId} onChange={(event) => setCompareFromId(event.target.value)} className="mt-1 block w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-text">
+                  {chronologicalHistory.map((scan) => <option key={scan.id} value={scan.id}>{new Date(scan.scanned_at).toLocaleString('es-ES')}</option>)}
+                </select>
+              </label>
+              <label className="text-sm text-text-muted">
+                Comparar con...
+                <select value={effectiveCompareToId} onChange={(event) => setCompareToId(event.target.value)} className="mt-1 block w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-text">
+                  {chronologicalHistory.map((scan) => <option key={scan.id} value={scan.id}>{new Date(scan.scanned_at).toLocaleString('es-ES')}</option>)}
+                </select>
+              </label>
+            </div>
+            {comparison ? (
+              <p role="status" className="mt-4 rounded-lg bg-surface px-4 py-3 text-sm text-text-muted">
+                {comparisonSummary}
+              </p>
+            ) : <p role="status" className="mt-3 text-sm text-text-muted">Selecciona dos escaneos distintos para ver sus diferencias.</p>}
+          </section>
         )}
 
-        <span className="text-sm text-slate-400 ml-auto">
-          Mostrando {eventosFiltrados.length} de {eventos.length} eventos
-        </span>
-      </div>
-
-      {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm">
-          {error}
-        </div>
-      )}
-
-      {error ? null : cargando ? (
-        <div className="text-center py-16 text-slate-400">Cargando eventos...</div>
-      ) : historial.length < 2 ? (
-        <div className="text-center py-16 bg-slate-800 border border-slate-700 rounded-xl">
-          <div className="w-16 h-16 bg-slate-700 rounded-full mx-auto mb-4 flex items-center justify-center text-2xl">
-            📭
+        {error && (
+          <div role="alert" className="mb-5 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-danger-text">
+            {error}
           </div>
-          <p className="text-slate-400 font-medium">No hay eventos</p>
-          <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
-            Los cambios se detectan al comparar dos escaneos.
-          </p>
-        </div>
-      ) : eventos.length === 0 ? (
-        <div className="text-center py-16 bg-slate-800 border border-slate-700 rounded-xl">
-          <div className="w-16 h-16 bg-slate-700 rounded-full mx-auto mb-4 flex items-center justify-center text-2xl">
-            ✅
+        )}
+
+        {loading ? (
+          <div role="status" aria-live="polite" className="rounded-xl border border-surface-border bg-surface-light py-16 text-center text-text-muted">
+            Cargando...
           </div>
-          <p className="text-slate-400 font-medium">Sin cambios entre escaneos</p>
-          <p className="text-sm text-slate-500 mt-1">
-            No se detectaron dispositivos nuevos, ausentes o que hayan regresado.
-          </p>
-        </div>
-      ) : eventosFiltrados.length === 0 ? (
-        <div className="text-center py-16 bg-slate-800 border border-slate-700 rounded-xl">
-          <p className="text-slate-400 font-medium">No hay eventos para esos filtros</p>
-          <button
-            type="button"
-            onClick={limpiarFiltros}
-            className="mt-4 text-sm text-blue-400 hover:text-blue-300"
-          >
-            Limpiar filtros
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-10">
-          {grupos.map((grupo) => (
-            <section key={grupo.key}>
-              <div className="flex items-center gap-4 mb-4">
-                <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
-                  {grupo.label}
-                </h2>
-                <span className="text-xs text-slate-500">
-                  {grupo.events.length} {grupo.events.length === 1 ? 'evento' : 'eventos'}
-                </span>
-                <div className="h-px flex-1 bg-slate-700" />
-              </div>
-              <div className="relative pl-6 border-l border-slate-700 space-y-4">
-                {grupo.events.map((event) => {
-                  const meta = EVENT_META[event.type];
-                  const title = event.device.hostname || event.device.vendor || 'Dispositivo';
+        ) : history.length === 0 ? (
+          <div className="rounded-xl border border-surface-border bg-surface-light py-16 text-center">
+            <span aria-hidden="true" className="text-4xl">🌐</span>
+            <p className="mt-3 font-medium text-text">No hay escaneos aún</p>
+            <p className="mt-1 text-sm text-text-muted">Los escaneos completados aparecerán aquí.</p>
+          </div>
+        ) : filteredGroups.length === 0 ? (
+          <div className="rounded-xl border border-surface-border bg-surface-light py-16 text-center">
+            <p className="font-medium text-text">No hay escaneos que coincidan</p>
+            <p className="mt-1 text-sm text-text-muted">Prueba cambiando los filtros o el texto de búsqueda.</p>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="mt-4 text-sm font-medium text-primary-light hover:text-primary-text"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {filteredGroups.map((group) => (
+              <CollapsibleDay key={group.key} title={group.title} count={group.scans.length}>
+                {getDayEntries(group.scans, eventsByScanId).map((entry) => {
+                  if (entry.kind === 'scan') {
+                    return (
+                      <ScanHistoryItem
+                        key={entry.scan.id}
+                        scan={entry.scan}
+                        events={eventsByScanId[entry.scan.id] || EMPTY_EVENTS}
+                        onOpen={openDetailFromList}
+                      />
+                    );
+                  }
+                  const runKey = `${entry.scans[0].id}:${entry.scans[entry.scans.length - 1].id}`;
                   return (
-                    <article
-                      key={event.id}
-                      className={`relative -ml-[1.65rem] pl-10 pr-4 py-4 rounded-xl border ${meta.accent}`}
-                    >
-                      <span className="absolute left-[0.35rem] top-5 w-7 h-7 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-sm">
-                        {meta.icon}
-                      </span>
-                      <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${meta.badge}`}
-                          >
-                            {meta.label}
-                          </span>
-                          {event.device.trusted === false && (
-                            <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-amber-500/10 text-amber-400 border-amber-500/20">
-                              No confiable
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-slate-500">{formatRelativeTime(event.timestamp)}</span>
-                      </div>
-                      <p className="text-white font-medium">{title}</p>
-                      <p className="text-xs font-mono text-slate-400 mt-1">{event.device.mac}</p>
-                      <p className="text-sm font-mono text-blue-400 mt-2">{event.device.ip || '—'}</p>
-                    </article>
+                    <UnchangedScansRow
+                      key={runKey}
+                      scans={entry.scans}
+                      expanded={Boolean(expandedRuns[runKey])}
+                      onToggle={() => toggleUnchangedRun(entry.scans)}
+                      onOpen={openDetailFromList}
+                    />
                   );
                 })}
-              </div>
-            </section>
-          ))}
-        </div>
+              </CollapsibleDay>
+            ))}
+          </div>
+        )}
+
+      </div>
+
+      {selectedScan && (
+        <ScanDetailModal
+          scan={selectedScan}
+          hosts={detailHosts}
+          events={eventsByScanId[selectedScan.id] || {
+            newDevices: [],
+            absentDevices: [],
+            returnedDevices: [],
+            changedPorts: [],
+          }}
+          devices={devices}
+          onUpdateDevice={handleDeviceUpdateSafely}
+          loading={detailLoading}
+          error={detailError}
+          onClose={closeDetail}
+        />
       )}
-    </div>
+    </main>
   );
 }

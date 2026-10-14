@@ -1,5 +1,6 @@
-import type { Host, ScanResult, ScanHistoryItem } from '../types/scan.types';
-import { ApiError, processErrorResponse } from '../errors/apiErrors';
+import type { Host, ScanDetail, ScanResult, ScanHistoryItem } from '../types/scan.types';
+import { NetworkError, ParseError, processErrorResponse } from '../errors/apiErrors';
+import { getCached, invalidateCache } from './cache';
 
 const API_URL = '/api';
 
@@ -7,46 +8,62 @@ async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     throw await processErrorResponse(response);
   }
-  return response.json();
-}
-
-function wrapNetworkError(error: unknown): never {
-  if (error instanceof ApiError) throw error;
-  throw new ApiError('No se pudo conectar con el servidor.', 'NETWORK_ERROR');
-}
-
-export async function createScan(): Promise<ScanResult> {
   try {
-    const res = await fetch(`${API_URL}/scans`, { method: 'POST' });
-    return await handleResponse<ScanResult>(res);
+    return await response.json() as T;
   } catch (error) {
-    wrapNetworkError(error);
+    throw new ParseError(error);
   }
 }
 
-export async function getScanHistory(): Promise<ScanHistoryItem[]> {
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  let response: Response;
   try {
-    const res = await fetch(`${API_URL}/scans`);
-    return await handleResponse<ScanHistoryItem[]>(res);
+    response = await fetch(`${API_URL}${path}`, init);
   } catch (error) {
-    wrapNetworkError(error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw error;
+    }
+    throw new NetworkError(error);
   }
+  return handleResponse<T>(response);
 }
 
-export async function getScanDetail(id: number): Promise<ScanResult> {
-  try {
-    const res = await fetch(`${API_URL}/scans/${id}`);
-    return await handleResponse<ScanResult>(res);
-  } catch (error) {
-    wrapNetworkError(error);
-  }
+export async function createScan(options?: { signal?: AbortSignal }): Promise<ScanResult> {
+  const result = await request<ScanResult>('/scans', {
+    method: 'POST',
+    signal: options?.signal,
+  });
+  invalidateCache('scan-history:');
+  invalidateCache('devices');
+  return result;
+}
+
+export function getScanHistory(limit = 10, offset = 0): Promise<ScanHistoryItem[]> {
+  const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
+  const safeOffset = Math.max(0, Math.floor(offset));
+  const key = `scan-history:${safeLimit}:${safeOffset}`;
+  return getCached(key, () => request<ScanHistoryItem[]>(
+    `/scans?limit=${safeLimit}&offset=${safeOffset}`,
+  ));
+}
+
+export async function getAllScanHistory(): Promise<ScanHistoryItem[]> {
+  const pageSize = 100;
+  const scans: ScanHistoryItem[] = [];
+  let offset = 0;
+  let page: ScanHistoryItem[];
+  do {
+    page = await getScanHistory(pageSize, offset);
+    scans.push(...page);
+    offset += page.length;
+  } while (page.length === pageSize);
+  return scans;
+}
+
+export async function getScanDetail(id: number): Promise<ScanDetail> {
+  return request<ScanDetail>(`/scans/${id}`);
 }
 
 export async function getScanHosts(id: number): Promise<Host[]> {
-  try {
-    const res = await fetch(`${API_URL}/scans/${id}/hosts`);
-    return await handleResponse<Host[]>(res);
-  } catch (error) {
-    wrapNetworkError(error);
-  }
+  return request<Host[]>(`/scans/${id}/hosts`);
 }

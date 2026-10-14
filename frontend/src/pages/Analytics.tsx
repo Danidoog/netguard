@@ -1,573 +1,645 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
-  BarChart,
-  Bar,
-  Area,
-  AreaChart,
-  ReferenceLine,
-  PieChart,
-  Pie,
-  Cell,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
 } from 'recharts';
-import { getScanHistory } from '../api/scans';
-import type { ScanHistoryItem, Host } from '../types/scan.types';
+import { ArrowRight, Router } from 'lucide-react';
+import { getDevices } from '../api/devices';
+import { getAllScanHistory } from '../api/scans';
 import { ApiError } from '../errors/apiErrors';
+import type { Device } from '../types/device.types';
+import type { Host, ScanHistoryItem } from '../types/scan.types';
+import { cleanHostname, getDeviceTypeLabel, getPortServiceLabel } from '../utils/deviceHelpers';
+import { formatDateTime, formatRelativeTime } from '../utils/format';
+import { GlossaryInfo } from '../components/GlossaryInfo';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+const SENSITIVE_PORTS = new Set([21, 22, 23, 445, 3389]);
+const SCANNER_MACS = new Set(['BBF270BEAB591C3D']);
+const SCANNER_HOSTNAMES = new Set(['bbf270beab591c3d', 'host.docker.internal']);
+const UNKNOWN_VALUES = new Set([
+  'desconocido',
+  'unknown',
+  'no disponible',
+  'no disponible (mac privada)',
+  'no disponible (mac privada/aleatoria)',
+  'tipo desconocido',
+  'privada/aleatoria',
+]);
+
+interface UnstableDevice {
+  mac: string;
+  label: string;
+  hasUserAlias: boolean;
+  changes: number;
+  lastChange: string;
+  changePercentage: number;
+}
+
+interface ScanPoint {
+  scannedAt: string;
+  label: string;
+  present: number;
+}
+
+interface CountEntry {
+  name: string;
+  value: number;
+  percentage: number;
+}
+
+interface PortEntry {
+  port: number;
+  service: string;
+  devices: number;
+  sensitive: boolean;
+}
+
+function scanHosts(scan: ScanHistoryItem): Host[] {
+  return Array.isArray(scan.hosts) ? scan.hosts : [];
+}
+
+function safeDate(value: string): number {
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function isUnknown(value: string | null | undefined): boolean {
+  const normalized = value?.trim().toLocaleLowerCase('es');
+  return !normalized
+    || UNKNOWN_VALUES.has(normalized)
+    || normalized.includes('mac privada')
+    || normalized.includes('mac aleatoria');
+}
+
+function isScanner(mac: string, hostname: string | null): boolean {
+  return SCANNER_MACS.has(mac.replace(/[^a-z0-9]/gi, '').toUpperCase())
+    || (hostname !== null && SCANNER_HOSTNAMES.has(cleanHostname(hostname).toLocaleLowerCase('es')));
+}
+
+function getDeviceLabel(device: Device | undefined, host: Host | undefined): { label: string; hasUserAlias: boolean } {
+  if (device?.alias?.trim()) return { label: device.alias.trim(), hasUserAlias: true };
+  const hostname = cleanHostname(device?.last_hostname || host?.hostname || null);
+  if (hostname !== '—') return { label: hostname, hasUserAlias: false };
+  const vendor = device?.vendor || host?.vendor;
+  if (!isUnknown(vendor)) return { label: vendor!.trim(), hasUserAlias: false };
+  return { label: 'Dispositivo desconocido', hasUserAlias: false };
+}
+
+function translateDeviceType(value: string | null | undefined): string {
+  if (isUnknown(value)) return 'Tipo desconocido';
+  const normalized = value!.trim().toLocaleLowerCase('es').replace(/[_-]+/g, ' ');
+  const translations: Record<string, string> = {
+    computer: 'Computador',
+    desktop: 'Computador',
+    laptop: 'Computador',
+    pc: 'Computador',
+    speaker: 'Parlante',
+    tv: 'TV',
+    phone: 'Teléfono',
+    mobile: 'Teléfono',
+    tablet: 'Tableta',
+    router: 'Router',
+    printer: 'Impresora',
+    camera: 'Cámara',
+  };
+  return translations[normalized] || getDeviceTypeLabel(value!);
+}
+
+function getVendorName(value: string | null | undefined): string {
+  return isUnknown(value) ? 'Sin identificar' : value!.trim();
+}
+
+function ChartTooltip({ active, payload }: {
+  active?: boolean;
+  payload?: Array<{ payload?: ScanPoint; value?: number }>;
+}) {
+  if (!active || !payload?.length || !payload[0].payload) return null;
+  const point = payload[0].payload;
+  return (
+    <div className="rounded-lg border border-surface-border bg-surface-light px-3 py-2 text-sm text-text shadow-lg">
+      <p className="font-medium">{formatDateTime(point.scannedAt)}</p>
+      <p className="mt-1 text-text-muted">{point.present} dispositivos presentes</p>
+    </div>
+  );
+}
+
+function navigateToDevices(): void {
+  sessionStorage.setItem('netguard-devices-initial-filter', 'all');
+  const devicesButton = document.querySelector<HTMLButtonElement>('button[aria-label="Dispositivos"]');
+  if (!devicesButton) {
+    console.error('No se encontró el control de navegación a Dispositivos.');
+    return;
+  }
+  devicesButton.click();
+}
+
+function MetricCard({ label, value, note, children }: {
+  label: string;
+  value: string | number;
+  note?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <article className="min-w-0 rounded-xl border border-surface-border bg-surface-light p-5">
+      <h2 className="text-sm font-medium text-text-muted">{label}</h2>
+      <p className="mt-1 truncate text-2xl font-bold text-text" title={String(value)}>{value}</p>
+      {note && <p className="mt-1 text-xs text-text-muted">{note}</p>}
+      {children}
+    </article>
+  );
+}
+
+function DistributionList({ title, rows, emptyText }: {
+  title: string;
+  rows: CountEntry[];
+  emptyText: string;
+}) {
+  const maximum = Math.max(1, ...rows.map((row) => row.value));
+  return (
+    <article className="min-w-0 rounded-xl border border-surface-border bg-surface-light p-5">
+      <h2 className="mb-4 font-semibold text-text">{title}</h2>
+      {rows.length ? (
+        <ul className="space-y-3">
+          {rows.map((row) => (
+            <li key={row.name} className="min-w-0">
+              <div className="mb-1 flex min-w-0 items-baseline justify-between gap-3">
+                <span className="truncate text-sm text-text" title={row.name}>{row.name}</span>
+                <span className="shrink-0 text-right text-xs text-text-muted">
+                  {row.value} {row.value === 1 ? 'dispositivo' : 'dispositivos'} ({row.percentage.toFixed(0)}%)
+                </span>
+              </div>
+              <div
+                role="progressbar"
+                aria-label={`${row.name}: ${row.value} ${row.value === 1 ? 'dispositivo' : 'dispositivos'}`}
+                aria-valuemin={0}
+                aria-valuemax={maximum}
+                aria-valuenow={row.value}
+                className="h-2 overflow-hidden rounded-full bg-surface-lighter"
+              >
+                <div className="h-full rounded-full bg-primary" style={{ width: `${(row.value / maximum) * 100}%` }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="py-8 text-center text-sm text-text-muted">{emptyText}</p>
+      )}
+    </article>
+  );
+}
 
 export function Analytics() {
-  const [historial, setHistorial] = useState<ScanHistoryItem[]>([]);
-  const [fabricantes, setFabricantes] = useState<{ name: string; value: number; percentage: number }[]>([]);
-  const [topDispositivos, setTopDispositivos] = useState<{ ip: string; apariciones: number }[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const [history, setHistory] = useState<ScanHistoryItem[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    cargarDatos();
+    let cancelled = false;
+    async function load() {
+      try {
+        const [scans, knownDevices] = await Promise.all([getAllScanHistory(), getDevices()]);
+        if (!cancelled) {
+          setHistory(scans);
+          setDevices(knownDevices);
+        }
+      } catch (cause) {
+        if (!cancelled) {
+          setError(cause instanceof ApiError ? cause.message : 'No se pudieron cargar las estadísticas.');
+          console.error('Error cargando estadísticas:', cause);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const cargarDatos = async () => {
-    setCargando(true);
-    setError(null);
-    try {
-      const datos = await getScanHistory();
-      setHistorial(datos as any);
+  const analytics = useMemo(() => {
+    const chronological = [...history].sort((a, b) => safeDate(a.scanned_at) - safeDate(b.scanned_at));
+    const latestHosts = chronological.length ? scanHosts(chronological[chronological.length - 1]) : [];
+    const latestHostByMac = new Map(latestHosts.map((host) => [host.mac.toUpperCase(), host]));
+    const hostsByMac = new Map<string, Host[]>();
+    for (const scan of chronological) {
+      for (const host of scanHosts(scan)) {
+        const mac = host.mac.toUpperCase();
+        const historyForDevice = hostsByMac.get(mac) || [];
+        historyForDevice.push(host);
+        hostsByMac.set(mac, historyForDevice);
+      }
+    }
 
-      // Contar fabricantes
-      const contadorVendors: Record<string, number> = {};
-      // Contar apariciones de cada IP
-      const contadorIPs: Record<string, number> = {};
-      let totalHosts = 0;
+    const devicesByMac = new Map<string, Device>();
+    for (const device of devices) devicesByMac.set(device.mac.toUpperCase(), device);
+    for (const [mac, hosts] of hostsByMac) {
+      if (devicesByMac.has(mac)) continue;
+      const host = hosts[hosts.length - 1];
+      devicesByMac.set(mac, {
+        mac: host.mac,
+        alias: null,
+        trusted: false,
+        last_ip: host.ip,
+        last_hostname: host.hostname,
+        vendor: host.vendor,
+        device_type: host.device_type,
+        os_hint: host.os_hint,
+        first_seen: '',
+        last_seen: '',
+        is_present: latestHostByMac.has(mac),
+        is_new: false,
+        open_ports: host.open_ports,
+        services: host.services,
+      });
+    }
 
-      datos.forEach((scan: any) => {
-        if (scan.hosts && Array.isArray(scan.hosts)) {
-          scan.hosts.forEach((host: Host) => {
-            const vendor = host.vendor || 'Desconocido';
-            contadorVendors[vendor] = (contadorVendors[vendor] || 0) + 1;
+    const vendors = new Map<string, Set<string>>();
+    const types = new Map<string, Set<string>>();
+    const portDevices = new Map<number, Set<string>>();
+    for (const [mac, device] of devicesByMac) {
+      const latestHost = latestHostByMac.get(mac);
+      const representativeHost = latestHost || hostsByMac.get(mac)?.at(-1);
+      if (isScanner(mac, device.last_hostname || representativeHost?.hostname || null)) continue;
+      const vendor = getVendorName(device.vendor || representativeHost?.vendor);
+      const type = translateDeviceType(device.device_type || representativeHost?.device_type);
+      const vendorMacs = vendors.get(vendor) || new Set<string>();
+      vendorMacs.add(mac);
+      vendors.set(vendor, vendorMacs);
+      const typeMacs = types.get(type) || new Set<string>();
+      typeMacs.add(mac);
+      types.set(type, typeMacs);
 
-            contadorIPs[host.ip] = (contadorIPs[host.ip] || 0) + 1;
-            totalHosts++;
+      const devicePorts = new Set<number>([
+        ...(device.open_ports || []),
+        ...(device.services || []).map((service) => {
+          const match = service.match(/(?:tcp|udp)\/(\d+)|(\d+)\/(?:tcp|udp)/i);
+          return match ? Number(match[1] || match[2]) : 0;
+        }),
+        ...(representativeHost?.open_ports || []),
+      ]);
+      devicePorts.delete(0);
+      for (const port of devicePorts) {
+        const macs = portDevices.get(port) || new Set<string>();
+        macs.add(mac);
+        portDevices.set(port, macs);
+      }
+    }
+
+    const deviceCount = devices.length;
+    const countEntries = (items: Map<string, Set<string>>): CountEntry[] => [...items.entries()]
+      .map(([name, macs]) => ({
+        name,
+        value: macs.size,
+        percentage: deviceCount ? (macs.size / deviceCount) * 100 : 0,
+      }))
+      .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, 'es'));
+    const vendorData = countEntries(vendors).slice(0, 8);
+    const typeData = countEntries(types).slice(0, 8);
+
+    const unstable: UnstableDevice[] = [];
+    for (let index = 1; index < chronological.length; index += 1) {
+      const previous = new Set(scanHosts(chronological[index - 1]).map((host) => host.mac.toUpperCase()));
+      const current = new Set(scanHosts(chronological[index]).map((host) => host.mac.toUpperCase()));
+      for (const mac of new Set([...previous, ...current])) {
+        if (previous.has(mac) === current.has(mac)) continue;
+        const latestHost = hostsByMac.get(mac)?.at(-1);
+        const device = devicesByMac.get(mac);
+        if (isScanner(mac, device?.last_hostname || latestHost?.hostname || null)) continue;
+        const existing = unstable.find((item) => item.mac === mac);
+        if (existing) {
+          existing.changes += 1;
+          existing.lastChange = chronological[index].scanned_at;
+        } else {
+          const { label, hasUserAlias } = getDeviceLabel(device, latestHost);
+          unstable.push({
+            mac,
+            label,
+            hasUserAlias,
+            changes: 1,
+            lastChange: chronological[index].scanned_at,
+            changePercentage: 0,
           });
         }
-      });
-
-      // Calcular porcentajes de fabricantes
-      const fabricantesArray = Object.entries(contadorVendors)
-        .map(([name, value]) => ({
-          name,
-          value,
-          percentage: totalHosts > 0 ? (value / totalHosts) * 100 : 0,
-        }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 6);
-
-      setFabricantes(fabricantesArray);
-
-      // Top 5 dispositivos con más apariciones
-      const topIPs = Object.entries(contadorIPs)
-        .map(([ip, apariciones]) => ({ ip, apariciones }))
-        .sort((a, b) => b.apariciones - a.apariciones)
-        .slice(0, 5);
-
-      setTopDispositivos(topIPs);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('No se pudieron cargar las estadísticas');
       }
-      console.error(err);
-    } finally {
-      setCargando(false);
     }
-  };
-
-  // Ordenar por fecha real (cronológicamente)
-  const escaneosOrdenados = [...historial].sort(
-    (a, b) => new Date(a.scanned_at).getTime() - new Date(b.scanned_at).getTime()
-  );
-
-  // Escaneos por día
-  const escaneosPorDia = escaneosOrdenados.reduce((acc: Record<string, number>, item) => {
-    const fecha = new Date(item.scanned_at).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
+    const transitionCount = Math.max(1, chronological.length - 1);
+    unstable.forEach((device) => {
+      device.changePercentage = Math.round((device.changes / transitionCount) * 100);
     });
-    acc[fecha] = (acc[fecha] || 0) + 1;
-    return acc;
-  }, {});
+    unstable.sort((a, b) => b.changes - a.changes || safeDate(b.lastChange) - safeDate(a.lastChange));
 
-  const datosPorDia = Object.entries(escaneosPorDia).map(([fecha, cantidad]) => ({
-    fecha,
-    cantidad,
-  }));
+    const scanPresence: ScanPoint[] = chronological.map((scan) => {
+      const date = new Date(scan.scanned_at);
+      const presentMacs = new Set(
+        scanHosts(scan)
+          .filter((host) => {
+            const mac = host.mac.toUpperCase();
+            return !isScanner(mac, devicesByMac.get(mac)?.last_hostname || host.hostname || null);
+          })
+          .map((host) => host.mac.toUpperCase()),
+      );
+      return {
+        scannedAt: scan.scanned_at,
+        label: Number.isNaN(date.getTime())
+          ? 'Sin fecha'
+          : date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
+        present: presentMacs.size,
+      };
+    });
 
-  // Dispositivos por escaneo (con fecha, hora y duración)
-  const datosDispositivos = escaneosOrdenados.slice(-10).map((item) => {
-    const fecha = new Date(item.scanned_at);
-    return {
-      id: `#${item.id}`,
-      fecha: fecha.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-      }),
-      hora: fecha.toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      dispositivos: item.total_hosts,
-      duracion: item.duration_seconds,
-    };
-  });
+    const openPortCounts: PortEntry[] = [...portDevices.entries()]
+      .map(([port, macs]) => ({
+        port,
+        service: getPortServiceLabel(port)
+          || ({ 21: 'FTP', 23: 'Telnet', 3389: 'RDP' }[port] ?? 'Servicio no identificado'),
+        devices: macs.size,
+        sensitive: SENSITIVE_PORTS.has(port),
+      }))
+      .sort((a, b) => b.devices - a.devices || a.port - b.port)
+      .slice(0, 10);
 
-  // Estadísticas generales
-  const totalEscaneos = historial.length;
-  const totalDispositivos = historial.reduce((acc, item) => acc + item.total_hosts, 0);
-  const duracionPromedio =
-    historial.length > 0
-      ? historial.reduce((acc, item) => acc + item.duration_seconds, 0) / historial.length
+    const durations = chronological
+      .map((scan) => scan.duration_seconds)
+      .filter((duration) => Number.isFinite(duration) && duration >= 0);
+    const averageDuration = durations.length
+      ? durations.reduce((sum, duration) => sum + duration, 0) / durations.length
       : 0;
-  const promedioDispositivos =
-    historial.length > 0 ? totalDispositivos / historial.length : 0;
-  const maxDispositivos = historial.length > 0
-    ? Math.max(...historial.map((h) => h.total_hosts))
-    : 0;
-  const minDispositivos = historial.length > 0
-    ? Math.min(...historial.map((h) => h.total_hosts))
-    : 0;
+    const aliasCount = devices.filter((device) => Boolean(device.alias?.trim())).length;
+    const trustedCount = devices.filter((device) => device.trusted).length;
+    const presentCount = devices.filter((device) => device.is_present).length;
+    const unstableCount = unstable.length;
 
-  if (cargando) {
-    return (
-      <div className="p-8">
-        <div className="text-center py-16 text-slate-400">Cargando estadísticas...</div>
-      </div>
-    );
+    return {
+      chronological,
+      scanPresence,
+      vendors: vendorData,
+      types: typeData,
+      openPortCounts,
+      unstable: unstable.slice(0, 8),
+      scans: chronological.length,
+      averageDuration,
+      fastestDuration: durations.length ? Math.min(...durations) : 0,
+      slowestDuration: durations.length ? Math.max(...durations) : 0,
+      deviceCount,
+      aliasCount,
+      trustedCount,
+      presentCount,
+      absentCount: devices.filter((device) => !device.is_present).length,
+      unstableCount,
+    };
+  }, [history, devices]);
+
+  if (loading) {
+    return <div role="status" aria-live="polite" className="p-8 text-center text-text-muted">Cargando estadísticas...</div>;
   }
 
+  const verifiedPercentage = analytics.deviceCount
+    ? Math.round((analytics.trustedCount / analytics.deviceCount) * 100)
+    : 0;
+  const aliasPercentage = analytics.deviceCount
+    ? Math.round((analytics.aliasCount / analytics.deviceCount) * 100)
+    : 0;
+  const instabilityPercentage = analytics.deviceCount > 0
+    ? Math.round((analytics.unstableCount / analytics.deviceCount) * 100)
+    : 0;
+
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Estadísticas</h1>
-        <p className="text-slate-400">Análisis de tus escaneos de red</p>
-      </div>
+    <main className="min-h-screen w-full bg-surface p-5 text-text sm:p-8">
+      <header className="mb-7">
+        <h1 className="text-3xl font-bold">Estadísticas</h1>
+        <p className="mt-1 text-sm text-text-muted">Identidad, actividad y estabilidad de la red</p>
+      </header>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm">
+        <div role="alert" className="mb-6 rounded-lg border border-danger/30 bg-danger/10 p-4 text-sm text-danger-text">
           {error}
         </div>
       )}
 
-      {historial.length === 0 ? (
-        <div className="text-center py-16 bg-slate-800 border border-slate-700 rounded-xl">
-          <p className="text-slate-400 font-medium">No hay datos para analizar</p>
-          <p className="text-sm text-slate-500 mt-1">
-            Realiza al menos un escaneo para ver las estadísticas
-          </p>
+      <section aria-label="Resumen de la red" className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Dispositivos"
+          value={analytics.deviceCount}
+          note={`en el inventario conocido · Presentes ahora: ${analytics.presentCount} · Ausentes: ${analytics.absentCount}`}
+        />
+        <MetricCard label="Verificados" value={`${analytics.trustedCount} de ${analytics.deviceCount}`}>
+          <div
+            role="progressbar"
+            aria-label={`Dispositivos verificados: ${verifiedPercentage}%`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={verifiedPercentage}
+            className="mt-3 h-2 overflow-hidden rounded-full bg-surface-lighter"
+          >
+            <div className="h-full rounded-full bg-primary" style={{ width: `${verifiedPercentage}%` }} />
+          </div>
+        </MetricCard>
+        <MetricCard label="Total de escaneos" value={analytics.scans} />
+        <MetricCard
+          label="Duración promedio"
+          value={`${analytics.averageDuration.toFixed(1)} s`}
+          note={analytics.scans
+            ? `Más rápido: ${analytics.fastestDuration} s · Más lento: ${analytics.slowestDuration} s`
+            : 'Sin escaneos para calcular duración'}
+        />
+      </section>
+
+      {!analytics.scans && (
+        <div className="mb-6 rounded-xl border border-surface-border bg-surface-light p-4 text-sm text-text-muted">
+          Aún no hay escaneos guardados. Las estadísticas del inventario están disponibles.
         </div>
-      ) : (
-        <>
-          {/* Tarjetas de resumen */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-400 font-medium">Total de escaneos</p>
-                <span className="text-xs text-slate-500">histórico</span>
-              </div>
-              <p className="text-3xl font-bold text-white mt-1">{totalEscaneos}</p>
-              <p className="text-xs text-slate-500 mt-1">
-                {promedioDispositivos.toFixed(1)} dispositivos promedio
-              </p>
-            </div>
-
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-400 font-medium">Dispositivos totales</p>
-                <span className="text-xs text-slate-500">únicos + repetidos</span>
-              </div>
-              <p className="text-3xl font-bold text-white mt-1">{totalDispositivos}</p>
-              <p className="text-xs text-slate-500 mt-1">
-                Máx: {maxDispositivos} · Mín: {minDispositivos}
-              </p>
-            </div>
-
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-400 font-medium">Promedio por escaneo</p>
-                <span className="text-xs text-slate-500">dispositivos</span>
-              </div>
-              <p className="text-3xl font-bold text-white mt-1">
-                {promedioDispositivos.toFixed(1)}
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                Por cada escaneo realizado
-              </p>
-            </div>
-
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-400 font-medium">Duración promedio</p>
-                <span className="text-xs text-slate-500">por escaneo</span>
-              </div>
-              <p className="text-3xl font-bold text-white mt-1">
-                {duracionPromedio.toFixed(1)}s
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                Tiempo medio de escaneo
-              </p>
-            </div>
-          </div>
-
-          {/* Gráficos en grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Gráfico de barras: Escaneos por día */}
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-white">Escaneos por día</h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Cantidad de escaneos realizados cada día
-                  </p>
-                </div>
-                <span className="text-xs bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20">
-                  {datosPorDia.length} días
-                </span>
-              </div>
-              <div style={{ width: '100%', height: 280 }}>
-                <ResponsiveContainer>
-                  <BarChart data={datosPorDia}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis
-                      dataKey="fecha"
-                      stroke="#94a3b8"
-                      fontSize={12}
-                      label={{
-                        value: 'Fecha',
-                        position: 'insideBottom',
-                        offset: -5,
-                        fill: '#64748b',
-                        fontSize: 11,
-                      }}
-                    />
-                    <YAxis
-                      stroke="#94a3b8"
-                      fontSize={12}
-                      label={{
-                        value: 'Escaneos',
-                        angle: -90,
-                        position: 'insideLeft',
-                        fill: '#64748b',
-                        fontSize: 11,
-                      }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#1e293b',
-                        border: '1px solid #334155',
-                        borderRadius: '8px',
-                        color: '#f1f5f9',
-                        padding: '12px',
-                      }}
-                      formatter={(value: any) => [
-                        `${value} ${value === 1 ? 'escaneo' : 'escaneos'}`,
-                        'Cantidad',
-                      ]}
-                      labelFormatter={(label) => `📅 ${label}`}
-                    />
-                    <Bar dataKey="cantidad" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Gráfico de área: Dispositivos por escaneo */}
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-white">Dispositivos por escaneo</h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Últimos 10 escaneos · Promedio: {promedioDispositivos.toFixed(1)}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <span className="text-xs bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20">
-                    Máx: {maxDispositivos}
-                  </span>
-                  <span className="text-xs bg-red-500/10 text-red-400 px-3 py-1 rounded-full border border-red-500/20">
-                    Mín: {minDispositivos}
-                  </span>
-                </div>
-              </div>
-
-              {/* Leyenda personalizada */}
-              <div className="flex items-center gap-4 mb-3 text-xs">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-4 h-0.5 bg-emerald-500" />
-                  <span className="text-slate-400">Dispositivos</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-4 h-0.5 border-t-2 border-dashed border-amber-500" />
-                  <span className="text-slate-400">Promedio ({promedioDispositivos.toFixed(1)})</span>
-                </div>
-              </div>
-
-              <div style={{ width: '100%', height: 280 }}>
-                <ResponsiveContainer>
-                  <AreaChart data={datosDispositivos}>
-                    <defs>
-                      <linearGradient id="colorDispositivos" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-
-                    <XAxis
-                      dataKey="hora"
-                      stroke="#94a3b8"
-                      fontSize={11}
-                      interval={0}
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                      label={{
-                        value: 'Hora del escaneo',
-                        position: 'insideBottom',
-                        offset: -45,
-                        fill: '#64748b',
-                        fontSize: 11,
-                      }}
-                    />
-
-                    <YAxis
-                      stroke="#94a3b8"
-                      fontSize={12}
-                      domain={[0, 'dataMax + 2']}
-                      label={{
-                        value: 'Dispositivos',
-                        angle: -90,
-                        position: 'insideLeft',
-                        fill: '#64748b',
-                        fontSize: 11,
-                      }}
-                    />
-
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#1e293b',
-                        border: '1px solid #334155',
-                        borderRadius: '8px',
-                        color: '#f1f5f9',
-                        padding: '12px',
-                      }}
-                      formatter={(value: any) => [`${value} dispositivos`, 'Cantidad']}
-                      labelFormatter={(_, payload) => {
-                        if (payload && payload[0]) {
-                          const data = payload[0].payload;
-                          const diff = data.dispositivos - promedioDispositivos;
-                          const diffText = diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1);
-                          const diffColor = diff > 0 ? '#10b981' : diff < 0 ? '#ef4444' : '#94a3b8';
-                          const diffIcon = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️';
-
-                          return (
-                            <div>
-                              <div>📅 {data.fecha} · {data.hora}</div>
-                              <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '4px' }}>
-                                ⏱️ Duración: {data.duracion.toFixed(1)}s
-                              </div>
-                              <div style={{ color: diffColor, fontSize: '11px', marginTop: '4px' }}>
-                                {diffIcon} vs promedio: {diffText}
-                              </div>
-                            </div>
-                          );
-                        }
-                        return '';
-                      }}
-                    />
-
-                    <ReferenceLine
-                      y={promedioDispositivos}
-                      stroke="#f59e0b"
-                      strokeDasharray="5 5"
-                      strokeWidth={2}
-                    />
-
-                    <Area
-                      type="monotone"
-                      dataKey="dispositivos"
-                      stroke="#10b981"
-                      strokeWidth={3}
-                      fill="url(#colorDispositivos)"
-                      dot={{
-                        fill: '#10b981',
-                        r: 5,
-                        strokeWidth: 2,
-                        stroke: '#0f172a',
-                      }}
-                      activeDot={{
-                        r: 8,
-                        fill: '#10b981',
-                        stroke: '#fff',
-                        strokeWidth: 2,
-                      }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
-          {/* Fabricantes con porcentajes */}
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Fabricantes más comunes</h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Top 6 fabricantes encontrados en todos los escaneos
-                </p>
-              </div>
-              <span className="text-xs bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full border border-purple-500/20">
-                {fabricantes.length} fabricantes
-              </span>
-            </div>
-
-            {fabricantes.length === 0 ? (
-              <p className="text-slate-500 text-center py-8">
-                No hay datos de fabricantes disponibles
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div style={{ width: '100%', height: 280 }}>
-                  <ResponsiveContainer>
-                    <PieChart>
-                      <Pie
-                        data={fabricantes}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={100}
-                        innerRadius={50}
-                        paddingAngle={2}
-                      >
-                        {fabricantes.map((_, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[index % COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #334155',
-                          borderRadius: '8px',
-                          color: '#f1f5f9',
-                        }}
-                        formatter={(value: any, name: any, props: any) => [
-                          `${value} dispositivos (${props.payload.percentage.toFixed(1)}%)`,
-                          name,
-                        ]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="space-y-3">
-                  {fabricantes.map((f, i) => (
-                    <div key={f.name}>
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                          />
-                          <span className="text-sm text-slate-300 truncate max-w-[200px]">
-                            {f.name}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-500">
-                            {f.percentage.toFixed(1)}%
-                          </span>
-                          <span className="text-sm font-semibold text-white w-8 text-right">
-                            {f.value}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${f.percentage}%`,
-                            backgroundColor: COLORS[i % COLORS.length],
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Top dispositivos más vistos */}
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Dispositivos más vistos</h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Dispositivos que aparecen con más frecuencia en los escaneos
-                </p>
-              </div>
-              <span className="text-xs bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full border border-amber-500/20">
-                Top 5
-              </span>
-            </div>
-
-            {topDispositivos.length === 0 ? (
-              <p className="text-slate-500 text-center py-8">
-                No hay dispositivos para mostrar
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {topDispositivos.map((d, i) => (
-                  <div
-                    key={d.ip}
-                    className="flex items-center gap-4 p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
-                  >
-                    <span className="text-sm font-bold text-slate-500 w-6">
-                      #{i + 1}
-                    </span>
-                    <span className="font-mono text-sm text-blue-400 flex-1">
-                      {d.ip}
-                    </span>
-                    <div className="flex-1 max-w-xs">
-                      <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
-                          style={{
-                            width: `${(d.apariciones / topDispositivos[0].apariciones) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <span className="text-xs text-slate-400">
-                      {d.apariciones} {d.apariciones === 1 ? 'vez' : 'veces'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </>
       )}
-    </div>
+
+      <section className="mb-6 rounded-xl border border-surface-border bg-surface-light p-5">
+        <div className="mb-4 flex items-start gap-2">
+          <div>
+            <h2 className="font-semibold text-text">Dispositivos presentes por escaneo</h2>
+            <p className="mt-1 text-xs text-text-muted">Cantidad de direcciones MAC únicas detectadas en cada escaneo</p>
+          </div>
+          <GlossaryInfo termId="mac" className="mt-0.5" />
+        </div>
+        {analytics.scanPresence.length ? (
+          <div className="h-72 min-w-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={analytics.scanPresence} margin={{ top: 8, right: 20, bottom: 18, left: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-surface-border)" />
+                <XAxis
+                  dataKey="label"
+                  stroke="var(--color-text-muted)"
+                  tick={{ fontSize: 11 }}
+                  label={{ value: 'Fecha del escaneo', position: 'insideBottom', offset: -10, fill: 'var(--color-text-muted)', fontSize: 12 }}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  stroke="var(--color-text-muted)"
+                  tick={{ fontSize: 11 }}
+                  width={42}
+                  label={{ value: 'Dispositivos presentes', angle: -90, position: 'insideLeft', fill: 'var(--color-text-muted)', fontSize: 12 }}
+                />
+                <Tooltip content={<ChartTooltip />} />
+                <Line
+                  type="monotone"
+                  dataKey="present"
+                  name="Dispositivos presentes"
+                  stroke="#10b981"
+                  strokeWidth={2.5}
+                  dot={{ r: 3, fill: 'var(--color-primary)' }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="py-12 text-center text-sm text-text-muted">Realiza un escaneo para ver la evolución de los dispositivos presentes.</p>
+        )}
+      </section>
+
+      <section className="mb-6 rounded-xl border border-surface-border bg-surface-light p-5">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-text">Dispositivos inestables</h2>
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-text-muted">
+              Cambios de presencia entre escaneos consecutivos
+              <GlossaryInfo termId="inestable" />
+            </p>
+          </div>
+          <span className="rounded-full border border-secondary/40 bg-secondary/15 px-3 py-1 text-xs font-semibold text-text">
+            {instabilityPercentage}% del inventario
+          </span>
+        </div>
+        {analytics.unstable.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[36rem] text-left text-sm">
+              <thead>
+                <tr className="border-b border-surface-border text-xs text-text-muted">
+                  <th scope="col" className="px-3 py-2 font-medium">Dispositivo</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Cambios de presencia</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Último cambio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analytics.unstable.map((item) => (
+                  <tr key={item.mac} className="border-b border-surface-border/60 last:border-0">
+                    <td className={`max-w-[22rem] truncate px-3 py-3 ${item.hasUserAlias ? 'text-text' : 'text-text-muted'}`} title={`${item.label} · ${item.mac}`}>
+                      {item.label}
+                      {isScanner(item.mac, item.label) && ' (escáner)'}
+                    </td>
+                    <td className="px-3 py-3 text-text">
+                      Apareció y desapareció {item.changes} {item.changes === 1 ? 'vez' : 'veces'}
+                    </td>
+                    <td className="px-3 py-3 text-text-muted" title={formatDateTime(item.lastChange)}>
+                      {formatRelativeTime(item.lastChange).toLocaleLowerCase('es')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="rounded-lg bg-surface px-4 py-8 text-center text-sm text-text-muted">
+            Se necesitan al menos dos escaneos para detectar cambios de presencia.
+          </p>
+        )}
+      </section>
+
+      <section className="mb-6 grid gap-6 xl:grid-cols-2">
+        <DistributionList
+          title="Fabricantes"
+          rows={analytics.vendors}
+          emptyText="No hay fabricantes disponibles."
+        />
+        <DistributionList
+          title="Tipos de dispositivo"
+          rows={analytics.types}
+          emptyText="No hay tipos identificados."
+        />
+      </section>
+
+      <section className="mb-6 rounded-xl border border-surface-border bg-surface-light p-5">
+        <div className="mb-4">
+          <h2 className="font-semibold text-text">Puertos abiertos</h2>
+          <p className="mt-1 text-xs text-text-muted">Cantidad de dispositivos únicos que han anunciado cada puerto</p>
+        </div>
+        {analytics.openPortCounts.length ? (
+          <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {analytics.openPortCounts.map((item) => (
+              <li key={item.port} className="flex min-w-0 items-center gap-3 rounded-lg bg-surface px-3 py-3">
+                <Router className="h-4 w-4 shrink-0 text-text-muted" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate text-sm text-text">
+                  <span className="font-mono">{item.port}</span>
+                  <span> · {item.service}</span>
+                </span>
+                {item.sensitive && (
+                  <span className="shrink-0 rounded-full border border-danger/40 bg-danger/10 px-2 py-1 text-xs font-medium text-danger-text">
+                    Sensible
+                  </span>
+                )}
+                <span className="shrink-0 text-xs text-text-muted">
+                  {item.devices} {item.devices === 1 ? 'dispositivo' : 'dispositivos'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="py-8 text-center text-sm text-text-muted">No se detectaron puertos abiertos.</p>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-surface-border bg-surface-light p-5">
+        <div className="mb-4">
+          <h2 className="font-semibold text-text">Cobertura de revisión</h2>
+          <p className="mt-1 text-xs text-text-muted">Avance de la identificación manual y verificación del inventario</p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+              <span className="text-text">Alias puestos</span>
+              <span className="text-text-muted">{analytics.aliasCount}/{analytics.deviceCount}</span>
+            </div>
+            <div
+              role="progressbar"
+              aria-label={`Dispositivos con alias: ${aliasPercentage}%`}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={aliasPercentage}
+              className="h-2 overflow-hidden rounded-full bg-surface-lighter"
+            >
+              <div className="h-full rounded-full bg-primary" style={{ width: `${aliasPercentage}%` }} />
+            </div>
+          </div>
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+              <span className="text-text">Dispositivos verificados</span>
+              <span className="text-text-muted">{analytics.trustedCount}/{analytics.deviceCount}</span>
+            </div>
+            <div
+              role="progressbar"
+              aria-label={`Dispositivos verificados: ${verifiedPercentage}%`}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={verifiedPercentage}
+              className="h-2 overflow-hidden rounded-full bg-surface-lighter"
+            >
+              <div className="h-full rounded-full bg-primary" style={{ width: `${verifiedPercentage}%` }} />
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={navigateToDevices}
+          className="mt-5 inline-flex items-center gap-2 rounded-lg border border-surface-border bg-surface-lighter px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-surface-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          Poner alias <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </section>
+    </main>
   );
 }

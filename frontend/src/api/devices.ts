@@ -1,5 +1,6 @@
 import type { Device, DeviceUpdate } from '../types/device.types';
-import { ApiError, processErrorResponse } from '../errors/apiErrors';
+import { NetworkError, ParseError, processErrorResponse } from '../errors/apiErrors';
+import { getCached, invalidateCache } from './cache';
 
 const API_URL = '/api';
 
@@ -7,35 +8,36 @@ async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     throw await processErrorResponse(response);
   }
-  return response.json();
-}
-
-function wrapNetworkError(error: unknown): never {
-  if (error instanceof ApiError) throw error;
-  throw new ApiError('No se pudo conectar con el servidor.', 'NETWORK_ERROR');
-}
-
-export async function getDevices(): Promise<Device[]> {
   try {
-    const res = await fetch(`${API_URL}/devices`);
-    return await handleResponse<Device[]>(res);
+    return await response.json() as T;
   } catch (error) {
-    wrapNetworkError(error);
+    throw new ParseError(error);
   }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, init);
+  } catch (error) {
+    throw new NetworkError(error);
+  }
+  return handleResponse<T>(response);
+}
+
+export function getDevices(): Promise<Device[]> {
+  return getCached('devices', () => request<Device[]>('/devices'));
 }
 
 export async function updateDevice(
   mac: string,
   data: DeviceUpdate
 ): Promise<Device> {
-  try {
-    const res = await fetch(`${API_URL}/devices/${encodeURIComponent(mac)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return await handleResponse<Device>(res);
-  } catch (error) {
-    wrapNetworkError(error);
-  }
+  const updated = await request<Device>(`/devices/${encodeURIComponent(mac)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  invalidateCache('devices');
+  return updated;
 }
