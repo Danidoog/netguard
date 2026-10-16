@@ -8,12 +8,13 @@ class ScanService:
     def __init__(self, scanner: NmapScanner):
         self.scanner = scanner
 
-    def scan_network(self) -> ScanResult:
-        result = self.scanner.scan_hosts()
-        self._save_to_db(result)
+    def scan_network(self, target: str | None = None) -> ScanResult:
+        result = self.scanner.scan_hosts(target=target)
+        scan_id = self._save_to_db(result)
+        result.id = scan_id
         return result
 
-    def _save_to_db(self, result: ScanResult):
+    def _save_to_db(self, result: ScanResult) -> int:
         db = SessionLocal()
         try:
             scan_record = ScanRecord(
@@ -24,10 +25,11 @@ class ScanService:
             )
             db.add(scan_record)
             db.flush()
+            saved_scan_id = scan_record.id
 
             for host in result.hosts:
                 db.add(HostRecord(
-                    scan_id=scan_record.id,
+                    scan_id=saved_scan_id,
                     ip=host.ip,
                     hostname=host.hostname,
                     mac=host.mac,
@@ -45,6 +47,7 @@ class ScanService:
             self._upsert_devices(db, result)
 
             db.commit()
+            return saved_scan_id
         except Exception:
             # [CALIDAD] ISO/IEC 25010 · Fiabilidad: rollback de la transacción en caso de error 
             # para mantener la consistencia de la base de datos.

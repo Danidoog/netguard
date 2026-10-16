@@ -74,3 +74,41 @@ class DeviceRecord(Base):
     first_seen = Column(String, nullable=False)
     last_seen = Column(String, nullable=False)
     is_present = Column(Boolean, default=True, nullable=False)
+
+
+class ScanTaskRecord(Base):
+    """
+    Tarea de escaneo en segundo plano. Persiste el ciclo de vida
+    de la solicitud (pending -> running -> completed | failed),
+    asociando el resultado del escaneo sin duplicar información.
+    """
+
+    __tablename__ = "scan_tasks"
+
+    id = Column(String, primary_key=True, index=True)
+    target = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="pending", index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+
+    scan_id = Column(Integer, ForeignKey("scans.id"), nullable=True)
+    error_code = Column(String, nullable=True)
+    error_message = Column(String, nullable=True)
+
+    scan = relationship("ScanRecord", lazy="joined")
+
+
+class SchedulerConfigRecord(Base):
+    """
+    Configuración persistente para escaneos periódicos automáticos en segundo plano.
+    """
+
+    __tablename__ = "scheduler_config"
+
+    id = Column(Integer, primary_key=True, default=1)
+    enabled = Column(Boolean, default=False, nullable=False)
+    interval_minutes = Column(Integer, default=30, nullable=False)
+    target = Column(String, nullable=True)
+    last_run_at = Column(DateTime(timezone=True), nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

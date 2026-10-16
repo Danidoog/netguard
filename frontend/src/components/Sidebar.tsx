@@ -7,6 +7,7 @@ import {
   History,
   LayoutDashboard,
   Router,
+  Settings,
   ShieldCheck,
 } from 'lucide-react';
 
@@ -20,6 +21,7 @@ const menuItems = [
   { id: 'devices', label: 'Dispositivos', Icon: Router },
   { id: 'history', label: 'Historial', Icon: History },
   { id: 'analytics', label: 'Estadísticas', Icon: BarChart3 },
+  { id: 'settings', label: 'Configuración', Icon: Settings },
   { id: 'help', label: 'Ayuda', Icon: HelpCircle },
 ];
 

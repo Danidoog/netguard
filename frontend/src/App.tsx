@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Devices } from './pages/Devices';
 import { History } from './pages/History';
 import { Help } from './pages/Help';
+import { Settings } from './pages/Settings';
 import { ErrorBoundary } from './errors/ErrorBoundary';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useBackendStatus } from './hooks/useBackendStatus';
@@ -13,9 +14,21 @@ import { StatusBanner } from './components/StatusBanner';
 
 const Analytics = lazy(() => import('./pages/Analytics').then((module) => ({ default: module.Analytics })));
 
+function getViewFromPath(pathname: string): string {
+  if (pathname === '/ayuda') return 'help';
+  if (pathname === '/configuracion' || pathname === '/settings') return 'settings';
+  return 'dashboard';
+}
+
+function getPathFromView(view: string): string {
+  if (view === 'help') return '/ayuda';
+  if (view === 'settings') return '/configuracion';
+  return '/';
+}
+
 function App() {
   const [activeView, setActiveView] = useState(() => (
-    window.location.pathname === '/ayuda' ? 'help' : 'dashboard'
+    getViewFromPath(window.location.pathname)
   ));
   const { isOnline } = useNetworkStatus();
   const { status: backendStatus, recheck: recheckBackend } = useBackendStatus();
@@ -52,14 +65,14 @@ function App() {
   useEffect(() => {
     const navigate = (view: string) => {
       setActiveView(view);
-      window.history.pushState({ view }, '', view === 'help' ? '/ayuda' : '/');
+      window.history.pushState({ view }, '', getPathFromView(view));
     };
     const onViewNavigation = (event: Event) => {
       const { view } = (event as CustomEvent<{ view: string }>).detail;
       navigate(view);
     };
     const onPopState = (event: PopStateEvent) => {
-      setActiveView(event.state?.view || (window.location.pathname === '/ayuda' ? 'help' : 'dashboard'));
+      setActiveView(event.state?.view || getViewFromPath(window.location.pathname));
     };
 
     window.addEventListener('netguard:navigate-view', onViewNavigation);
@@ -75,7 +88,7 @@ function App() {
       <div className="flex min-h-screen bg-surface text-text">
         <Sidebar activeView={activeView} onViewChange={(view) => {
           setActiveView(view);
-          window.history.pushState({ view }, '', view === 'help' ? '/ayuda' : '/');
+          window.history.pushState({ view }, '', getPathFromView(view));
         }} />
         <main className="relative flex-1 overflow-auto pb-20">
           <div className="px-8 pt-8">
@@ -99,6 +112,7 @@ function App() {
           <Suspense fallback={<div role="status" aria-live="polite" className="p-8 text-center text-text-muted">Cargando estadísticas...</div>}>
             {activeView === 'analytics' && <Analytics />}
           </Suspense>
+          {activeView === 'settings' && <Settings />}
           {activeView === 'help' && <Help />}
         </main>
       </div>
