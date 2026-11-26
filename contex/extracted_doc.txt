@@ -1,0 +1,363 @@
+
+
+
+
+
+
+
+
+
+NETGUARD – ANALISIS Y MONITOREO DE REDES 
+INGENIERÍA DE SISTEMAS
+
+
+
+
+
+
+
+
+
+POPAYÁN 
+11 DE SEPTIEMBRE 2026
+
+
+
+
+
+
+
+
+
+
+
+NETGUARD – ANALISIS Y MONITOREO DE REDES 
+– JUAN ESTEBAN COLORADO CORAL y DANIEL ALEXANDER COBO ARBOLEDA
+ CORPORACION UNIVERSITARIA COMFACAUCA UNICOMFACAUCA 
+INGENIERIA DE SISTEMAS
+
+
+
+
+
+
+
+POPAYAN 
+2026
+Contents
+ TOC \o "1-3" \h \z \u CONTENIDO DE FIGURAS PAGEREF _Toc240575060 \h 3
+CONTENIDO DE TABLAS PAGEREF _Toc240575061 \h 3
+1.CARACTERIZACIÓN DE LA ORGANIZACIÓN PAGEREF _Toc240575062 \h 4
+1.1Informacion general PAGEREF _Toc240575063 \h 4
+1.2Misión de BlackCircuit paradigm PAGEREF _Toc240575064 \h 5
+1.4Objetivos de la organización PAGEREF _Toc240575065 \h 6
+1.5Proceso objeto de estudio PAGEREF _Toc240575066 \h 7
+2.IDENTIFICACIÓN Y PLANTEAMIENTO DEL PROBLEMA PAGEREF _Toc240575067 \h 7
+3.EVIDENCIAS DEL PROBLEMA PAGEREF _Toc240575068 \h 8
+4.ARBOL DE PROBLEMAS PAGEREF _Toc240575069 \h 8
+4.1Problema central PAGEREF _Toc240575070 \h 8
+4.2Causas PAGEREF _Toc240575071 \h 8
+4.3Efectos PAGEREF _Toc240575072 \h 9
+4.4Gráfico del árbol de problemas PAGEREF _Toc240575073 \h 9
+5.VIABILIZACIÓN DEL PROBLEMA PAGEREF _Toc240575074 \h 10
+6.JUSTIFICACIÓN PAGEREF _Toc240575075 \h 11
+7.ANTECEDENTES DE LA ORGANIZACIÓN PAGEREF _Toc240575076 \h 12
+8.ESTADO DEL ARTE PAGEREF _Toc240575077 \h 13
+8.1Ámbito Internacional PAGEREF _Toc240575078 \h 14
+8.2Ámbito Nacional PAGEREF _Toc240575079 \h 14
+8.3Ámbito local o regional PAGEREF _Toc240575080 \h 15
+8.4Síntesis comparativa y aporte al proyecto PAGEREF _Toc240575081 \h 15
+REFERENCIAS PAGEREF _Toc240575082 \h 16
+
+
+CONTENIDO DE FIGURAS
+ TOC \c "Ilustración" \h Ilustración 1. Árbol de problemas de NetGuardPAGEREF _Toc239975787 \h 11
+
+CONTENIDO DE TABLAS
+ TOC \c "Tabla" \h Tabla 1. Datos Generales de la población objetivoPAGEREF _Toc239975797 \h 6
+Tabla 2. Misión de NetGuardPAGEREF _Toc239975798 \h 7
+Tabla 3. Visión de NetGuardPAGEREF _Toc239975799 \h 7
+Tabla 4. Clasificación de las causasPAGEREF _Toc239975800 \h 12
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CARACTERIZACIÓN DE LA ORGANIZACIÓN
+El presente proyecto se desarrolla bajo la iniciativa tecnológica BlackCircuit Paradigm S.A.S., una organización conformada por el equipo investigador enfocada en el desarrollo de soluciones de software. Aunque el problema objeto de estudio (el desconocimiento de los dispositivos en redes domésticas) ocurre en los hogares de los usuarios, la caracterización que se presenta a continuación corresponde a la organización que formula y desarrollará la solución tecnológica (NetGuard).
+Informacion general 
+
+Tabla  SEQ Tabla \* ARABIC 1. Datos Generales de la población objetivo
+
+Aspecto
+
+Descripción
+
+Nombre la organización
+
+BlackCircuit Paradigm S.A.S
+Tipo de la organización 
+Empresa privada / Iniciativa de desarrollo tecnológico
+Sector
+Tecnologías de la Información (TI) y Desarrollo de Software
+Ubicación
+Popayan, Cauca
+Actividad principal
+Prestación de servicios de soporte técnico, mantenimiento y gestión de infraestructura tecnológica para pequeñas y medianas empresas
+Área, dependencia o proceso donde se realiza el estudio
+Equipo de investigación de Desarrollo (I+D) 
+Nota: Elaboración Propia
+
+
+ Misión de BlackCircuit paradigm
+
+Tabla  SEQ Tabla \* ARABIC 2. Misión de BlackCircuit paradigm
+
+Misión
+
+La misión de BlackCircuit Paradigm S.A.S. es prestar servicios de soporte, mantenimiento y gestión de infraestructura tecnológica a pequeñas y medianas empresas contribuyendo a la continuidad, eficiencia y seguridad de sus operaciones mediante una adecuada administración de sus recursos tecnológicos.
+Nota: Elaboración Propia 
+Interpretación
+
+La misión establece que BlackCircuit Paradigm S.A.S orienta sus actividades hacia la prestación de servicios de soporte técnico, mantenimiento y gestión de infraestructura tecnológica para pequeñas y medianas empresas. Su propósito se centra en contribuir a la continuidad y eficiencia de las operaciones de sus clientes mediante una adecuada administración de los recursos tecnológicos.
+
+ Visión de BlackCircuit paradigm 
+
+Tabla  SEQ Tabla \* ARABIC 3. Visión de BlackCircuit paradigm
+
+Visión 
+
+
+BlackCircuit Paradigm S.A.S. busca posicionarse como una empresa reconocida por la calidad y confiabilidad de sus servicios de soporte y gestión tecnológica, fortaleciendo continuamente sus procesos internos, optimizando la administración de su infraestructura de red y adoptando herramientas que contribuyan a la seguridad y eficiencia de sus operaciones.
+Nota: Elaboración Propia 
+Interpretación
+
+La visión establece que BlackCircuit Paradigm S.A.S proyecta su crecimiento a partir del fortalecimiento de la calidad y confiabilidad de sus servicios de soporte y gestión tecnológica. Para alcanzar esta proyección, la organización plantea la mejora continua de sus procesos internos y la optimización de la administración de su infraestructura tecnologica.
+
+
+
+
+
+
+ Objetivos de la organización
+
+Objetivo general
+
+Brindar soluciones tecnológicas que respondan a las necesidades de personas y organizaciones, contribuyendo al mejoramiento de sus procesos mediante el uso de tecnologías de la información.
+
+Objetivos específicos
+
+Desarrollar y ofrecer soluciones tecnológicas que respondan a las necesidades identificadas en los usuarios.
+
+Mejorar continuamente la calidad y eficiencia de los servicios tecnológicos ofrecidos por la organización.
+
+Promover la innovación y la incorporación de nuevas tecnologías en los servicios y soluciones desarrollados.
+
+Fortalecer la calidad y eficiencia de los servicios y soluciones tecnológicas ofrecidos por la organización.
+
+
+ Proceso objeto de estudio
+El proceso objeto de estudio corresponde a la administración y monitoreo de la infraestructura de red utilizada por BlackCircuit Paradigm S.A.S para el desarrollo de sus actividades. Este proceso comprende a la identificación de los dispositivos conectados, el seguimiento de los cambios presentes en la red y la consulta de información relacionada con los servicios disponibles. Actualmente, estas actividades pueden requerir procedimientos manuales y herramientas independientes, dificultando la obtención de una visión centralizada y comprensible del estado de la infraestructura.
+
+IDENTIFICACIÓN Y PLANTEAMIENTO DEL PROBLEMA 
+BlackCircuit Paradigm S.A.S. presta servicios relacionados con el soporte técnico, mantenimiento y gestión de infraestructura tecnológica para pequeñas y medianas empresas. Como parte de estas actividades, la organización requiere realizar consultas y verificaciones periódicas sobre las redes informáticas que administra, con el propósito de identificar los dispositivos conectados, conocer información básica de los equipos y verificar los servicios disponibles en la infraestructura.
+Actualmente, estas actividades pueden realizarse mediante herramientas especializadas de análisis y descubrimiento de redes que requieren la ejecución de comandos por consola y la posterior interpretación de los resultados obtenidos. Aunque estas herramientas proporcionan información técnica relevante, su utilización para consultas frecuentes puede resultar tediosa y demandar tiempo adicional, especialmente cuando es necesario ejecutar diferentes comandos, revisar múltiples resultados y organizar la información para obtener una visión general del estado de la red.
+Esta situación genera una dificultad operativa para el personal encargado de la gestión tecnológica, debido a que parte del tiempo destinado a las actividades de administración de la infraestructura debe emplearse en procesos de consulta, interpretación y organización manual de información. Además, cuando se presentan cambios en la red, como la incorporación de nuevos dispositivos o modificaciones en los servicios disponibles, puede resultar necesario repetir los procedimientos de consulta para actualizar la información.
+El problema no se relaciona con la ausencia de herramientas capaces de realizar descubrimiento de redes, sino con la falta de un mecanismo centralizado que permita recopilar, organizar y presentar dicha información de manera sencilla y eficiente para las actividades de gestión realizadas por BlackCircuit Paradigm S.A.S.
+Por lo anterior, se identifica como problema central la dificultad para realizar de manera eficiente la identificación, consulta y monitoreo de los dispositivos y servicios presentes en las redes administradas por BlackCircuit Paradigm S.A.S., debido a la dependencia de procedimientos manuales y consultas mediante herramientas de consola que requieren tiempo para su ejecución e interpretación.
+Esta situación puede incrementar el tiempo requerido para obtener información actualizada sobre una red, dificultar el seguimiento de los cambios en la infraestructura y aumentar el esfuerzo necesario para mantener organizada la información de los dispositivos administrados por la organización.
+EVIDENCIAS DEL PROBLEMA
+Con el propósito de evidenciar la situación identificada en BlackCircuit Paradigm S.A.S., se plantea un escenario relacionado con las actividades de soporte técnico y administración de redes que realiza la organización. La evidencia se enfoca en el proceso utilizado para recopilar información sobre los dispositivos conectados a las redes administradas por la empresa y en el tiempo requerido para ejecutar, revisar e interpretar los resultados obtenidos mediante herramientas de consola.
+Metodología
+Para la identificación de la situación se tomó como referencia una actividad habitual dentro de las labores de soporte y administración de redes de BlackCircuit Paradigm S.A.S.: la consulta de los dispositivos presentes en una red administrada por la organización.
+El procedimiento convencional consiste en que el personal encargado del soporte técnico debe utilizar herramientas de análisis de red mediante consola para realizar el descubrimiento de los dispositivos conectados. Una vez ejecutada la consulta, es necesario esperar a que finalice el proceso, revisar los resultados generados e interpretar la información obtenida para determinar los dispositivos encontrados y sus respectivos datos de red.
+Durante este proceso, además del tiempo empleado en la ejecución de la consulta, se requiere tiempo adicional para revisar y organizar la información obtenida. Esto se debe a que los resultados proporcionados por las herramientas de consola se presentan principalmente en formatos técnicos que deben ser interpretados por el personal encargado antes de ser utilizados en las actividades de soporte o administración.
+La situación adquiere mayor relevancia para BlackCircuit cuando estas consultas deben realizarse sobre diferentes redes administradas por la empresa, atender solicitudes de soporte o verificar periódicamente cambios en los dispositivos conectados. En estos casos, la actividad debe repetirse y el tiempo destinado a ejecutar y analizar cada consulta se acumula dentro de las labores diarias del personal técnico.
+Ejemplo de la situación identificada
+Un escenario representativo para BlackCircuit Paradigm S.A.S. se presenta cuando el área de soporte recibe una solicitud relacionada con una de las redes administradas por la organización. Por ejemplo, puede ser necesario verificar qué dispositivos se encuentran conectados a una red, identificar una dirección IP determinada o comprobar si se ha incorporado un nuevo dispositivo.
+Para realizar esta verificación mediante el procedimiento convencional, el responsable debe acceder al entorno de consola, ejecutar la herramienta de análisis correspondiente, esperar la finalización del descubrimiento y posteriormente revisar los resultados obtenidos. Si la información requerida no puede determinarse directamente a partir de los resultados, es necesario realizar consultas adicionales o repetir el procedimiento.
+Cuando esta situación se presenta de manera frecuente, el personal técnico debe invertir una cantidad considerable de tiempo en actividades relacionadas con la ejecución y revisión de consultas que podrían ser automatizadas o presentadas de una manera más estructurada. Este tiempo representa un recurso operativo que podría destinarse a otras actividades de soporte, mantenimiento y gestión de las redes administradas por BlackCircuit.
+Además, la necesidad de interpretar manualmente los resultados dificulta que la información obtenida pueda ser utilizada directamente por otros componentes de un sistema de gestión. Los datos deben ser revisados y organizados antes de poder incorporarse a procesos posteriores de visualización, consulta o monitoreo.
+Resultado
+La situación descrita permite evidenciar que dentro de las actividades de administración y soporte de redes de BlackCircuit Paradigm S.A.S. existe una oportunidad de mejora relacionada con la forma en que se obtiene y procesa la información de los dispositivos conectados.
+El procedimiento basado en consultas mediante consola requiere no solamente ejecutar las herramientas correspondientes, sino también esperar la finalización del proceso, revisar los resultados e interpretar la información obtenida. Cuando estas actividades deben repetirse para diferentes redes o solicitudes de soporte, se genera un consumo adicional de tiempo para el personal técnico.
+Como primera aproximación a la solución propuesta, se desarrolló en NetGuard un lector de redes capaz de realizar el descubrimiento de dispositivos y entregar la información obtenida en formato JSON. Por ejemplo, los resultados pueden incluir datos como direcciones IP, direcciones MAC y otra información proporcionada durante el proceso de descubrimiento.
+La utilización de una estructura JSON permite que los datos obtenidos puedan ser procesados posteriormente por los demás componentes de la solución, evitando que la información tenga que permanecer exclusivamente en el formato generado por las herramientas de consola. Actualmente, esta funcionalidad constituye una primera implementación del sistema, mientras que los componentes relacionados con la visualización, organización y monitoreo de la información se encuentran en proceso de desarrollo.
+Conclusión
+La evidencia permite establecer que el proceso convencional utilizado para obtener información de las redes administradas por BlackCircuit Paradigm S.A.S. presenta una oportunidad de mejora debido al tiempo requerido para ejecutar las consultas, revisar los resultados e interpretar la información obtenida.
+Esta situación puede adquirir mayor impacto cuando el personal de soporte debe realizar consultas de manera frecuente o sobre diferentes redes, debido a que el tiempo empleado en estas actividades se acumula y reduce el tiempo disponible para otras labores técnicas.
+En respuesta a esta problemática, el lector de redes desarrollado como parte de NetGuard representa una primera implementación orientada a automatizar y estructurar la obtención de información de los dispositivos presentes en una red. La generación de resultados en formato JSON proporciona una base para que, en las siguientes etapas del proyecto, dicha información pueda ser integrada con mecanismos de visualización, organización y monitoreo dirigidos a facilitar las labores de soporte y administración de redes de BlackCircuit Paradigm S.A.S.
+ARBOL DE PROBLEMAS
+ Problema central
+Dificultad para identificar, monitorear y gestionar oportunamente los dispositivos y servicios presentes durante la administración de una red informática.
+Causas
+
+Causa directa 1: Ausencia de un inventario centralizado y actualizado de los dispositivos conectados a la red.
+
+Información de los dispositivos almacenada de manera dispersa.
+
+Cambios en las direcciones IP y dispositivos que no son registrados oportunamente.
+
+Causa directa 2: Uso de procesos manuales para identificar y analizar dispositivos, puertos y servicios de red.
+
+Dependencia de herramientas independientes para realizar diferentes tareas de análisis. 
+
+Falta de automatización en la recopilación y organización de la información.
+
+Causa directa 3: Insuficiente seguimiento de los cambios que ocurren en la infraestructura de red.
+
+Ausencia de un historial centralizado de los resultados de los escaneos.
+
+Falta de mecanismos para comparar automáticamente el estado actual con registros anteriores.
+
+Causa directa 4: Limitados mecanismos para identificar oportunamente situaciones que requieren atención.
+
+Ausencia de criterios centralizados para clasificar dispositivos y cambios de red.
+
+Falta de mecanismos automatizados de generación y priorización de alertas.
+
+ Efectos
+
+Efectos directos
+
+Dificultad para detectar oportunamente dispositivos desconocidos o nuevos.
+
+Mayor tiempo para identificar cambios y problemas en la infraestructura de red.
+
+Dificultad para conocer el estado actual de los puertos y servicios expuestos.
+
+Incremento del esfuerzo requerido para administrar y mantener actualizada la información de la red.
+
+Efectos posteriores
+
+De los dispositivos desconocidos: aumento del riesgo de que dispositivos no autorizados permanezcan sin identificar
+
+Del mayor tiempo de diagnóstico: incremento del tiempo de respuesta ante incidentes o cambios relevantes.
+
+De la dificultad para conocer puertos y servicios: mayor exposición a riesgos asociados con servicios innecesariamente accesibles.
+
+Del esfuerzo administrativo: menor eficiencia en la gestión de la infraestructura de red.
+
+Gráfico del árbol de problemas 
+Ilustración  SEQ Ilustración \* ARABIC 1. Árbol de problemas de NetGuard
+
+
+Nota: Elaboración Propia
+VIABILIZACIÓN DEL PROBLEMA
+Del análisis de las causas identificadas se establece que las dificultades asociadas a la consulta, identificación y procesamiento de información sobre los dispositivos conectados a las redes administradas por BlackCircuit Paradigm S.A.S. son susceptibles de intervención desde el área de Ingeniería de Sistemas, debido a que están relacionadas con el análisis de redes, la identificación de dispositivos, el procesamiento de información y el desarrollo de herramientas de software.
+Por otra parte, existen causas que se encuentran fuera del alcance directo del equipo, como las limitaciones de infraestructura proporcionada por los proveedores de Internet o las características y vulnerabilidades propias de determinados dispositivos y sistemas operativos. Estas situaciones no pueden ser solucionadas directamente mediante el desarrollo del proyecto, debido a que dependen de fabricantes, proveedores de servicios o condiciones externas a la herramienta.
+
+Clasificación de las causas
+Tabla  SEQ Tabla \* ARABIC 4. Clasificación de las causas
+
+Tipo de Causa
+
+Causa Identificada
+
+Interpretación
+
+Susceptible de intervención
+
+Dificultad para identificar los dispositivos conectados a la red doméstica.
+
+Puede abordarse desde Ingeniería de Sistemas mediante técnicas de descubrimiento y análisis de redes.
+Susceptible de intervención
+Desconocimiento de los servicios disponibles en los dispositivos conectados.
+Existe un campo de intervención relacionado con el escaneo de servicios y procesamiento de información de red.
+Susceptible de intervención
+Información técnica de la red presentada de manera poco comprensible para usuarios no especializados.
+Puede intervenirse mediante el desarrollo de software y una adecuada presentación de los resultados.
+Susceptible de intervención
+Falta de mecanismos sencillos para analizar el estado de una red doméstica.
+Puede abordarse mediante el diseño y desarrollo de una herramienta informática orientada al usuario.
+Fuera del alcance
+Limitaciones o fallas de infraestructura del proveedor de Internet.
+Dependen directamente del proveedor y no pueden ser solucionadas por el equipo mediante el proyecto.
+Fuera del alcance
+Vulnerabilidades propias del firmware o software de dispositivos de terceros.
+Su corrección depende de los fabricantes y de las actualizaciones que estos proporcionen.
+Nota: Elaboración Propia
+JUSTIFICACIÓN
+Durante los últimos años, el acceso a Internet en los hogares colombianos ha aumentado de manera significativa, incrementando también la cantidad de usuarios y dispositivos que hacen parte de las redes domésticas. De acuerdo con la Encuesta de Calidad de Vida (ECV) 2025 del DANE, el 73,9 % de los hogares colombianos tenía acceso a Internet, lo que representa un incremento de 14,4 puntos porcentuales frente a 2022 y más de 3,5 millones de nuevos hogares conectados durante ese periodo (DANE, 2026).
+
+Este crecimiento de la conectividad ocurre en un contexto en el que también aumentan los riesgos relacionados con el uso de tecnologías digitales. Según el balance de ciberseguridad correspondiente a 2024, basado en cifras del Centro Cibernético de la Policía Nacional, en Colombia se registraron 77.666 denuncias de delitos informáticos durante 2024, frente a 63.249 en 2023, lo que representa un incremento aproximado del 23 % (CCIT & Centro Cibernético Policial, 2025). Entre los delitos con mayor número de casos se encuentran el hurto por medios informáticos, con 37.409 casos, el acceso abusivo a un sistema informático, con 16.955 casos, y la violación de datos personales, con 11.954 casos.
+
+Adicionalmente, la información disponible sobre población joven evidencia que la seguridad digital continúa siendo un desafío. La ENTIC Hogares 2024, divulgada por MinTIC y DANE, reportó que solamente el 23,7 % de los hogares con niños, niñas o adolescentes que tienen acceso a Internet utiliza controles parentales, porcentaje que disminuye al 9,9 % en las zonas rurales (MinTIC & DANE, 2025). La misma fuente registra que más de 45.000 niños y 214.000 adolescentes manifestaron haber sido víctimas de algún incidente de seguridad digital.
+
+Estos datos evidencian que existe una población considerable de usuarios que utiliza Internet desde sus hogares y que se encuentra expuesta a diferentes situaciones relacionadas con la seguridad digital. Sin embargo, las cifras anteriores no permiten afirmar por sí solas que los usuarios desconozcan específicamente qué dispositivos o servicios están activos en sus redes domésticas. Esta situación constituye precisamente un aspecto que debe ser comprobado mediante evidencia directa del proyecto (ver sección 3, Evidencias del problema).
+
+A este escenario de conectividad y exposición se suma la alta incidencia de amenazas cibernéticas dirigidas a la infraestructura digital del país. De acuerdo con el Panorama de Amenazas 2026 de FortiGuard Labs, durante 2025 Colombia registró alrededor de 10,9 billones de intentos de ciberataque y cerca de 7 billones de escaneos de vulnerabilidad (FortiGuard Labs, 2026). Estas cifras evidencian un rastreo constante y automatizado por parte de actores maliciosos en busca de brechas de seguridad, puertos abiertos y configuraciones débiles tanto en redes corporativas como domésticas.
+
+La proliferación de dispositivos del Internet de las Cosas (IoT) en los hogares amplifica este riesgo. Los usuarios suelen conectar cámaras, televisores y asistentes inteligentes sin modificar las credenciales de fábrica del enrutador, desconociendo los servicios que quedan expuestos. Un informe de Kaspersky (2025) señala un preocupante factor cultural frente a este fenómeno: aproximadamente 1 de cada 4 usuarios en América Latina se muestra indiferente ante la posibilidad de que un tercero acceda sin autorización a sus dispositivos domésticos. Esta falta de percepción del riesgo y la carencia de visibilidad sobre lo que ocurre en la red local convierten a los hogares en un objetivo fácil para el secuestro de dispositivos o la interceptación de datos.
+
+En consecuencia, resulta pertinente estudiar las dificultades que presentan los usuarios domésticos para identificar los dispositivos conectados, reconocer los servicios disponibles y comprender el estado de seguridad de su propia red. NetGuard se plantea dentro de este contexto como un proyecto susceptible de intervención desde Ingeniería de Sistemas, orientado a facilitar el análisis de redes domésticas y presentar información técnica de manera comprensible para el usuario.
+ANTECEDENTES DE LA ORGANIZACIÓN
+Al tratarse de BlackCricuit Paradigm S.A.S. de una iniciativa tecnológica en fase de consolidación, no existen antecedentes formales relacionados con el desarrollo o un despliegue comercial de soluciones orientadas al monitoreo y descubrimiento de dispositivos en redes domésticas. Por esta razón, el presente proyecto constituye la primera acción formal de la organización en este ámbito.
+No obstante, como parte de las etapas preliminares de desarrollo, el equipo de trabajo ha realizado pruebas de concepto orientadas al descubrimiento básico de dispositivos orientadas al descubrimiento básico de dispositivos conectados a una red local, mediante el uso de scripts desarrollados en Python y el framework FastAPI. Estas pruebas permitieron explorar mecanismos para identificar información básica de los dispositivos, como las direcciones IP y direcciones MAC, además, sirvieron como base técnica para definir las funcionalidades de NetGuard.
+A partir de estas pruebas preliminares, se identifico la necesidad de transformar los mecanismos técnicos de descubrimiento de redes en una herramienta que pudiera ser utilizada e interpretada por usuarios sin conocimientos avanzados en administración o seguridad de redes. De esta manera, NetGuard representa la evolución de estas pruebas de concepto hacia una solución estructurada, orientada y pensada en el usuario final y enfocada en proporcionar una mayor visibilidad sobre los dispositivos presentes en una red doméstica.
+Como referencia para el desarrollo, se analizaron herramientas ya existentes de descubrimiento y escaneo de redes, entre ellas Nmap, Angry IP Scanner y Fing. Estas soluciones permitieron identificar funcionalidades y enfoques técnicos relacionados con el descubrimiento de dispositivos; sin embargo, el análisis realizado permitió establecer oportunidades de mejora relacionadas con la accesibilidad y presentación de la información para usuarios domésticos.
+Brecha de accesibilidad técnica: Algunas soluciones requieren el uso de comandos por consola o conocimientos técnicos previos para interpretar correctamente los resultados obtenidos, lo que puede dificultar su utilización cotidiana por parte de usuarios domésticos sin experiencia previa
+
+Necesidad de una visualización más accesible: Se identifico la oportunidad de presentar la información obtenida mediante el descubrimiento de dispositivos de una manera mas clara y comprensible, evitando que el usuario tenga que interpretar directamente métricas o resultados técnicos de bajo nivel.
+Por lo tanto, aunque las tecnologías utilizadas por NetGuard, como los sockets de red, el descubrimiento mediante direcciones IP y MAC y los mecanismos de escaneo, cuentan con antecedentes ampliamente establecidos, la organización no registra desarrollos previos propios en esta área. El presente proyecto parte de pruebas de concepto internas y del análisis de soluciones existentes para desarrollar una herramienta que facilite la visibilidad de los dispositivos presentes en redes domesticas y acerque dicha información a un usuario final sin requerir conocimientos avanzados de redes.
+ESTADO DEL ARTE
+En la actualidad existen diferentes herramientas orientadas al descubrimiento, monitoreo y análisis de dispositivos dentro de una red. Estas soluciones permiten a los administradores identificar equipos conectados, conocer su disponibilidad, recopilar información técnica y, en algunos casos, detectar posibles vulnerabilidades. Para poder establecer el contexto tecnológico de NetGuard, se revisaron soluciones de referencia en los ámbitos internacional, nacional, identificando sus principales características y su relación con las necesidades del proyecto.
+Ámbito Internacional 
+
+En el ámbito internacional existen herramientas ampliamente utilizadas para el descubrimiento y monitoreo de redes. Entre ellas se encuentra Nmap (Network Mapper), software libre orientado al descubrimiento de redes y auditoría de seguridad. Nmap permite identificar hosts activos, servicios disponibles y diferentes características de los dispositivos presentes en una red. Debido a su flexibilidad y capacidad de automatización, también puede utilizarse como motor de exploración dentro de otras aplicaciones.
+
+Otra solución de referencia es Zabbix, plataforma de monitoreo de infraestructura que permite supervisar dispositivos, servidores y servicios de red. Entre sus funcionalidades se encuentran el descubrimiento automático de dispositivos, la recopilación de métricas mediante protocolos como SNMP, el monitoreo de disponibilidad, la generación de alertas y la representación gráfica de información. Su alcance permite realizar un seguimiento detallado de infraestructuras de red, aunque su enfoque está principalmente orientado a escenarios donde se requiere una plataforma de monitoreo estructurada.
+
+Por su parte, Nagios Core es una plataforma de código abierto utilizada para monitorear redes, servidores y aplicaciones. Permite comprobar la disponibilidad de dispositivos y servicios mediante diferentes mecanismos y protocolos, además de proporcionar herramientas para la supervisión continua de infraestructura. Su principal enfoque se encuentra en el monitoreo y administración de entornos donde se requiere controlar de manera permanente el estado de diferentes recursos.
+En el ámbito de la seguridad informática también se encuentra OpenVAS/Greenbone, una solución especializada en la evaluación y gestión de vulnerabilidades. Esta plataforma permite realizar evaluaciones de seguridad orientadas a identificar posibles debilidades en sistemas y servicios. Debido a su alcance, se encuentra enfocada en un nivel de análisis más especializado que el descubrimiento básico de dispositivos de una red doméstica.
+
+En conjunto, estas herramientas representan diferentes niveles de análisis de redes: Nmap se concentra principalmente en el descubrimiento y exploración; Zabbix y Nagios amplían el enfoque hacia el monitoreo continuo de infraestructura; y OpenVAS/Greenbone se orienta hacia la evaluación de vulnerabilidades. Estas características constituyen referentes tecnológicos para definir el alcance y las funcionalidades que pueden resultar pertinentes para NetGuard.
+
+
+
+Ámbito Nacional 
+En el contexto colombiano, el acceso de los usuarios domésticos a las funciones de administración de sus redes depende en gran medida de los equipos, servicios e interfaces proporcionados por los operadores de telecomunicaciones. Los usuarios pueden interactuar con sus redes mediante los mecanismos de administración ofrecidos por proveedores de servicios de Internet (ISP), como Claro y Movistar, además de las configuraciones disponibles directamente en los dispositivos de red utilizados en el hogar.
+
+Sin embargo, desde la perspectiva del usuario final, existe una diferencia entre disponer de conectividad y contar con herramientas que permitan comprender de manera sencilla qué dispositivos se encuentran presentes en la red. Las interfaces de administración de los equipos domésticos pueden variar según el fabricante, modelo y operador, y la información disponible puede estar orientada principalmente a la configuración del servicio.
+
+Esta situación permite identificar una oportunidad para una capa de software independiente que facilite la visualización y comprensión de la información de una red local. En este contexto, NetGuard se plantea como una herramienta complementaria, cuyo objetivo no es reemplazar las funciones proporcionadas por los ISP, sino ofrecer una representación más accesible de los dispositivos detectados dentro de una red autorizada.
+
+Ámbito local o regional
+
+En el ámbito local y regional, particularmente en entornos domésticos, el problema adquiere relevancia debido a que una red puede incorporar diversos tipos de dispositivos, como computadores, teléfonos inteligentes, televisores, impresoras, cámaras y otros dispositivos IoT. Aunque estos equipos puedan encontrarse conectados a la misma infraestructura de red, su identificación y clasificación no siempre resulta evidente para un usuario sin conocimientos especializados.
+
+En este escenario, la necesidad identificada para el proyecto consiste en facilitar una visión general de los dispositivos presentes en una red local sin exigir al usuario conocimientos avanzados de administración de redes o seguridad informática. Por esta razón, el proyecto toma como referencia las capacidades técnicas de herramientas especializadas, pero propone una capa de abstracción orientada a la interpretación de los resultados por parte del usuario final.
+
+Síntesis comparativa y aporte al proyecto
+
+El análisis del estado del arte permite identificar que las herramientas estudiadas presentan diferentes enfoques y niveles de complejidad. Nmap proporciona capacidades de descubrimiento y exploración que resultan pertinentes para identificar hosts, puertos y características básicas de los dispositivos. Zabbix y Nagios aportan conceptos relacionados con el monitoreo, disponibilidad, recopilación de métricas y visualización de información, mientras que OpenVAS/Greenbone constituye un referente para el análisis especializado de vulnerabilidades.
+
+A partir de estos antecedentes, NetGuard toma las capacidades de descubrimiento de Nmap como base técnica y las integra en una arquitectura propia desarrollada con Python y FastAPI. El backend se encarga de procesar los resultados obtenidos y transformarlos en información estructurada para su posterior presentación mediante una interfaz orientada al usuario final.
+
+De manera complementaria, el análisis de Zabbix y Nagios permite establecer una diferenciación en cuanto al alcance inicial del proyecto. Mientras estas plataformas están diseñadas para escenarios de monitoreo continuo y administración de infraestructura, NetGuard prioriza inicialmente el descubrimiento de dispositivos y la presentación de información básica como dirección IP, dirección MAC, nombre del host y fabricante. Esto permite mantener un alcance adecuado para una red doméstica y, al mismo tiempo, establecer una base sobre la cual puedan incorporarse posteriormente nuevas funcionalidades de monitoreo y análisis.
+
+Por otro lado, OpenVAS/Greenbone permite reconocer que el análisis de vulnerabilidades constituye un nivel de seguridad más especializado. Por esta razón, dicha funcionalidad no constituye el núcleo inicial de NetGuard, sino una posible línea de evolución del proyecto.
+
+En síntesis, el aporte del estado del arte para NetGuard no consiste en replicar las funcionalidades completas de las herramientas analizadas, sino en identificar aquellas capacidades que pueden ser adaptadas a un escenario doméstico. De esta manera, el proyecto busca establecer una capa intermedia entre los mecanismos técnicos de descubrimiento y monitoreo de redes y un usuario final que requiere comprender de manera sencilla qué dispositivos se encuentran conectados a su red.
+
+REFERENCIAS
+FortiGuard Labs - threat intelligence platform. (s/f). Fortinet. Recuperado de https://www.fortinet.com/fortiguard/labs 
+
+Gobierno Petro conectó 3,5 millones de hogares en tres años y, por primera vez, más de la mitad de los hogares rurales tienen internet - Gobierno Petro conectó 3,5 millones de hogares en tres años y, por primera vez, más de la mitad de los hogares rurales tienen internet. (s/f). MINTIC Colombia. Recuperado https://www.mintic.gov.co/portal/715/w3-article-437305.html 
+
+MinTic. (s/f). ONTIC. Recuperado de https://ontic.mintic.gov.co 
+
+Kaspersky, E. (s/f). Kaspersky: Soluciones de ciberseguridad para el Hogar y la Empresa. Kaspersky.es. Recuperado de https://www.kaspersky.es 
+
+Cámara Colombiana de Informática y Telecomunicaciones (S/f). Org.co. Recuperado de https://www.ccit.org.co/noticias/balance-de-ciberseguridad-2024-desafios-y-prevencion-para-un-entorno-digital-seguro/ 

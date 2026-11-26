@@ -10,3 +10,4 @@ class ScanResult:
     total_hosts: int         # len(hosts)
     duration_seconds: float  # Cuánto tardó el escaneo
     scanned_at: str          # Timestamp ISO UTC de cuándo se escaneó
+    id: int | None = None    # ID de persistencia (ScanRecord.id)

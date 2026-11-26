@@ -41,3 +41,15 @@ class ScanFailedError(NetGuardError):
     la red a escanear."""
     code = "SCAN_FAILED"
     http_status = 500
+
+
+class ScanAlreadyRunningError(NetGuardError):
+    """Ya existe una tarea de escaneo activa para el objetivo."""
+    code = "SCAN_ALREADY_RUNNING"
+    http_status = 409
+
+
+class TaskNotFoundError(NetGuardError):
+    """La tarea de escaneo solicitada no existe."""
+    code = "TASK_NOT_FOUND"
+    http_status = 404

@@ -1,26 +1,55 @@
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from app.core.exceptions import NetGuardError
+from app.core.exceptions import NetGuardError, ScanAlreadyRunningError
 from app.scanners.nmap_scanner import NmapScanner
 from app.services.scan_service import ScanService
+from app.services.task_service import TaskService, task_to_dict
+from app.services.scheduler_service import SchedulerService, _UNSET
 
 # Importaciones usadas para la base de datos
 from app.core.database import engine, Base, SessionLocal
-from app.db.models import ScanRecord, DeviceRecord
+from app.db.models import ScanRecord, DeviceRecord, ScanTaskRecord, SchedulerConfigRecord
 
 Base.metadata.create_all(bind=engine)
+
+scanner = NmapScanner()
+scan_service = ScanService(scanner)
+task_service = TaskService(scan_service)
+scheduler_service = SchedulerService(task_service)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Recupera tareas interrumpidas tras un reinicio del servidor
+    task_service.recover_interrupted_tasks()
+    scheduler_service.start()
+    yield
+    scheduler_service.stop()
+    task_service.shutdown(wait=False)
+
 
 app = FastAPI(
     title="NetGuard API",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
-scanner = NmapScanner()
-scan_service = ScanService(scanner)
+
+class ScanTaskCreate(BaseModel):
+    target: str | None = None
+
+
+class SchedulerConfigUpdate(BaseModel):
+    enabled: bool | None = None
+    interval_minutes: int | None = None
+    target: str | None = None
+
+
 
 
 class DeviceUpdate(BaseModel):
@@ -118,8 +147,62 @@ def root():
 
 @app.post("/api/scans")
 def scan_network():
+    db = SessionLocal()
+    try:
+        active_task = (
+            db.query(ScanTaskRecord)
+            .filter(ScanTaskRecord.status.in_(["pending", "running"]))
+            .first()
+        )
+        if active_task:
+            raise ScanAlreadyRunningError(
+                f"Ya existe una tarea de escaneo activa (ID: {active_task.id}, estado: '{active_task.status}')."
+            )
+    finally:
+        db.close()
+
     result = scan_service.scan_network()
     return asdict(result)
+
+
+@app.post("/api/tasks/scans", status_code=status.HTTP_202_ACCEPTED)
+@app.post("/api/scans/async", status_code=status.HTTP_202_ACCEPTED)
+@app.post("/api/tasks", status_code=status.HTTP_202_ACCEPTED)
+def create_scan_task(req: ScanTaskCreate | None = None):
+    target = req.target if req else None
+    task = task_service.create_task(target=target)
+    return task_to_dict(task)
+
+
+@app.get("/api/tasks/{task_id}")
+@app.get("/api/scans/tasks/{task_id}")
+def get_task_status(task_id: str):
+    task = task_service.get_task(task_id)
+    return task_to_dict(task)
+
+
+@app.get("/api/tasks")
+def list_tasks(status: str | None = None, limit: int = 50, offset: int = 0):
+    tasks = task_service.list_tasks(status=status, limit=limit, offset=offset)
+    return [task_to_dict(t) for t in tasks]
+
+
+@app.get("/api/config/scheduler")
+def get_scheduler_config():
+    return scheduler_service.get_config()
+
+
+@app.post("/api/config/scheduler")
+@app.put("/api/config/scheduler")
+def update_scheduler_config(update: SchedulerConfigUpdate):
+    fields = update.model_dump(exclude_unset=True)
+    return scheduler_service.update_config(
+        enabled=fields.get("enabled"),
+        interval_minutes=fields.get("interval_minutes"),
+        target=fields["target"] if "target" in fields else _UNSET,
+    )
+
+
 
 
 @app.get("/api/scans")

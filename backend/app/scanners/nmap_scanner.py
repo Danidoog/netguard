@@ -554,11 +554,14 @@ class NmapScanner:
         self.nmap_path = shutil.which("nmap")
 
         self.mac_lookup = MacLookup()
-        try:
-            self.mac_lookup.update_vendors()
-        except Exception as e:
-            print(f"[NmapScanner] No se pudo actualizar la base de "
-                  f"fabricantes MAC: {type(e).__name__}: {e}")
+        import threading
+        def _bg_update():
+            try:
+                self.mac_lookup.update_vendors()
+            except Exception as e:
+                print(f"[NmapScanner] No se pudo actualizar la base de "
+                      f"fabricantes MAC: {type(e).__name__}: {e}")
+        threading.Thread(target=_bg_update, daemon=True, name="netguard-mac-vendor-update").start()
 
         self._own_ip = self._detect_own_ip()
 
@@ -699,17 +702,37 @@ class NmapScanner:
             ) from e
 
     def _detect_local_cidr(self) -> str:
-        if self._own_ip is None:
-            raise ScanFailedError(
-                "No se pudo determinar la IP local para detectar la red "
-                "a escanear."
-            )
+        # Actualiza dinámicamente la IP propia activa (por si cambió de red Wi-Fi o Ethernet)
+        current_ip = self._detect_own_ip()
+        if current_ip is not None:
+            self._own_ip = current_ip
 
+        if self._own_ip is not None:
+            for iface, addrs in psutil.net_if_addrs().items():
+                for addr in addrs:
+                    if addr.family == socket.AF_INET and addr.address == self._own_ip:
+                        if addr.netmask:
+                            network = ipaddress.IPv4Network(
+                                f"{self._own_ip}/{addr.netmask}", strict=False
+                            )
+                            return str(network)
+
+        # Fallback: buscar la interfaz activa no-loopback con IPv4 y máscara
         for iface, addrs in psutil.net_if_addrs().items():
+            iface_lower = iface.lower()
+            if iface_lower.startswith(("lo", "docker", "veth", "br-", "virbr")):
+                continue
             for addr in addrs:
-                if addr.family == socket.AF_INET and addr.address == self._own_ip:
+                if (
+                    addr.family == socket.AF_INET
+                    and addr.address
+                    and addr.address != "127.0.0.1"
+                    and not addr.address.startswith("169.254.")
+                    and addr.netmask
+                ):
+                    self._own_ip = addr.address
                     network = ipaddress.IPv4Network(
-                        f"{self._own_ip}/{addr.netmask}", strict=False
+                        f"{addr.address}/{addr.netmask}", strict=False
                     )
                     return str(network)
 
@@ -761,6 +784,8 @@ class NmapScanner:
 
     def _get_own_mac(self) -> str | None:
         if self._own_ip is None:
+            self._own_ip = self._detect_own_ip()
+        if self._own_ip is None:
             return None
         for iface, addrs in psutil.net_if_addrs().items():
             has_own_ip = any(
@@ -770,7 +795,7 @@ class NmapScanner:
             if not has_own_ip:
                 continue
             for a in addrs:
-                if a.family == psutil.AF_LINK and a.address:
+                if getattr(psutil, "AF_LINK", None) is not None and a.family == psutil.AF_LINK and a.address:
                     return a.address
         return None
 

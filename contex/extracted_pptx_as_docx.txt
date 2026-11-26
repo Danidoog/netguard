@@ -1,0 +1,775 @@
+
+67003822860
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SISTEMA AUTOMATIZADO DE DESCUBRIMIENTO Y MONITOREO DE REDES LOCALES
+
+
+
+
+
+
+
+DANIEL ALEXANDER COBO
+JUAN ESTEBAN COLORADO
+MARIA ALEJANDRA LONDOÑO
+
+
+
+
+
+
+PRESENTADO A:
+INGENIERO GABRIEL ANGEL OSORIO
+
+
+
+
+
+
+27 DE AGOSTO DE 2026
+FACULTAD DE INGENIERÍA
+INGENIERÍA DE SISTEMAS
+
+
+
+TABLA DE CONTENIDO
+
+
+ TOC \h \u \z \t "Heading 1,1,Heading 2,2,Heading 3,3,"JUSTIFICACIÓN4
+ACTORES5
+DIAGRAMA DE CASOS DE USO6
+DIAGRAMA MER7
+DICCIONARIO DE DATOS8
+
+
+
+
+
+JUSTIFICACIÓN
+Se plantea crear un sistema de gestión automatizada de redes, capaz de detectar los dispositivos conectados de una red local (a través del Gateway/router), con la finalidad de abordar limitaciones que suelen presentarse en la administración manual de estos entornos, tales como:
+
+
+Falta de seguimiento continuo de los dispositivos conectados
+
+Desconocimiento de puertos abiertos y posibles vectores de ataque
+
+Dificultad para acceder a la información de red de forma rápida y clara
+
+Ausencia de centralización de los datos, lo que dispersa la visibilidad del estado real de la red
+Estas falencias representan riesgos de seguridad y dificultan la toma de decisiones oportunas frente a posibles vulnerabilidades.
+
+Para abordar este problema, se propone un pipeline de trabajo estructurado en las siguientes etapas: 
+Descubrir – identificar – analizar – registrar – monitorear – alertar.
+
+
+
+
+
+
+ACTORES
+
+Usuario:
+Interactúa con el sistema mediante una interfaz (dashboard) donde ingresa los datos de entrada necesarios para iniciar un escaneo (por ejemplo, el rango de red o CIDR a analizar). A cambio, el sistema le devuelve visualizaciones sobre los dispositivos gestionados: su estado, historial de escaneos y detalles de cada equipo detectado.
+
+Funciones del sistema:
+Se encarga de ejecutar el proceso de escaneo sobre la red indicada, identificar dispositivos conectados, enriquecer su información (fabricante, estado), persistir los resultados de forma estructurada y exponer esa información al usuario a través de un API consultable desde el dashboard.
+
+Funciones:
+Registrar redes a escanear 
+Descubrir dispositivos activos dentro de la red indicada
+Identificar metadatos de cada dispositivo (IP, MAC, fabricante, hostname)
+Registrar el historial de escaneos con fecha y dispositivos en una base de datos SQLite.
+Consultar el historial de escaneos realizados.
+Consultar el detalle de un escaneo específico y sus dispositivos asociados.
+
+
+DIAGRAMA DE CASOS DE USO
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+DIAGRAMA MER
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+DICCIONARIO DE DATOS 
+
+
+
+Tabla: Scans
+
+
+Almacena el registro e historial de los escaneos de red realizados 
+
+
+Atributo
+
+
+Tipo
+
+
+Tamaño
+
+
+Descripción
+
+
+Llave
+
+
+Regla
+
+
+Nulo
+
+
+id
+
+
+INT
+
+
+4
+
+
+Identificador único del escaneo 
+
+
+PK
+
+
+AUTO_INCREMENT 
+
+
+NO
+
+
+target 
+
+
+VARCHAR 
+
+
+255 
+
+
+IP o rango de red escaneado 
+
+
+
+
+
+NOT NULL
+
+
+NO
+
+
+total_hosts 
+
+
+INT 
+
+
+4
+
+
+Número de dispositivos encontrados 
+
+
+
+
+
+NOT NULL 
+
+
+NO
+
+
+duration_seconds 
+
+
+FLOAT 
+
+
+8
+
+
+Tiempo del escaneo en segundos 
+
+
+
+
+
+NOT NULL
+
+
+NO
+
+
+scanned_at 
+
+
+DATETIME 
+
+
+
+
+
+Fecha y hora del escaneo 
+
+
+
+
+
+NOT NULL
+
+
+NO
+
+
+created_at 
+
+
+DATETIME 
+
+
+
+
+
+Fecha de creación del registro 
+
+
+
+
+
+DEFAULT CURRENT_TIMESTAMP 
+
+
+SÏ
+
+
+
+
+Tabla: Hosts
+
+
+Almacena la información de los dispositivos (hosts) detectados en cada escaneo .
+
+
+Atributo
+
+
+Tipo
+
+
+Tamaño
+
+
+Descripción
+
+
+Llave
+
+
+Regla
+
+
+Nulo
+
+
+id
+
+
+INT
+
+
+4
+
+
+Identificador único del host 
+
+
+PK
+
+
+AUTO_INCREMENT 
+
+
+NO
+
+
+scan_id 
+
+
+INT
+
+
+4
+
+
+ID del escaneo al que pertenece 
+
+
+FK 
+
+
+REFERENCES scans(id) 
+
+
+NO
+
+
+ip 
+
+
+VARCHAR
+
+
+45
+
+
+Dirección IP del dispositivo 
+
+
+
+
+
+NOT NULL
+
+
+NO
+
+
+hostname 
+
+
+VARCHAR
+
+
+225
+
+
+ Nombre del dispositivo en la red 
+
+
+
+
+
+
+
+
+SI
+
+
+mac 
+
+
+VARCHAR
+
+
+17
+
+
+Dirección MAC del dispositivo 
+
+
+
+
+
+
+
+
+SI
+
+
+vendor 
+
+
+VARCHAR
+
+
+100
+
+
+Fabricante del dispositivo 
+
+
+
+
+
+
+
+
+SI
+
+
+status 
+
+
+VARCHAR
+
+
+20
+
+
+Estado del host (up/down) 
+
+
+
+
+
+DEFAULT 'up'
+
+
+SI
+
+
+HISTORIA DE USUARIOS
+
+
+
+Historia de Usuario
+
+
+Número: H01
+
+
+Usuario: Administrador de la red
+
+
+Nombre de Historia:Iniciar escaneo de red
+
+
+Prioridad en Negocio: Alta
+
+
+Riesgo en desarrollo: Medio
+
+
+Puntos Estimados: 5
+
+
+Interacción Asignada: 1
+
+
+Programador Responsable: Equipo de desarrollo de NetGuard
+
+
+Descripción: Como administrador de red, me gustaría iniciar un escaneo de la red desde NetGuard para identificar los dispositivos conectados y obtener información básica sobre ellos, con la finalidad de también conocer puntos abiertos.
+
+
+Validación: El administrador podrá iniciar un escaneo desde el frontend y visualizar todos los dispositivos; mientras que el sistema deberá mostrar el resultado del escaneo con los dispositivos que fueron encontrados y registrar la ejecución en el historial.
+
+
+
+La validación se realizará utilizando la funcionalidad de escaneo implementada actualmente en NetGuard, gracias a las herramientas nMap y demás. Además, el administrador va a conocer los dispositivos presentes en la red y constituye una función central.
+
+
+
+Por último, el resultado del escaneo deberá estar disponible al finalizar la ejecución, dentro del tiempo máximo establecido para el escaneo.
+
+
+Historia de Usuario
+Número: H02
+Usuario: Administrador de la red
+Nombre de Historia: Consultar dispositivos detectados
+Prioridad en Negocio: Alta
+Riesgo en desarrollo: Medio
+Puntos Estimados: 5
+Interacción Asignada: 1
+Programador Responsable: Equipo de desarrollo de NetGuard
+Descripción: Como administrador de red, me gustaría visualizar la información de los dispositivos detectados para conocer los equipos presentes en la red y sus características identificadas.
+Validación: El administrador podrá visualizar desde el frontend la información de los dispositivos encontrados durante un escaneo; mientras que el sistema deberá mostrar los datos disponibles de cada dispositivo, como dirección IP, dirección MAC, nombre del equipo, fabricante y estado de presencia.
+La validación se realizará utilizando la información obtenida mediante las herramientas de descubrimiento de red implementadas en NetGuard, como Nmap y los diferentes mecanismos de detección disponibles. Además, esta información permitirá al administrador conocer las características básicas de los dispositivos conectados a la red.
+Por último, la información de los dispositivos deberá estar disponible en el frontend una vez finalice el escaneo y se obtengan los resultados correspondientes
+
+
+
+Historia de Usuario
+
+Número: H03
+
+Usuario: Administrador de la red
+
+Nombre de Historia: Consultar el historial de Escaneos
+
+Prioridad en Negocio: Alta
+
+Riesgo en desarrollo: Bajo
+
+Puntos Estimados: 3
+
+Interacción Asignada: 1
+
+Programador Responsable: Equipo de desarrollo de NetGuard
+
+Descripción: Como administrador de red, quisiera consultar el historial de los escaneos realizados para revisar y comparar los resultados obtenidos anteriormente.
+
+Validación: El administrador podrá consultar desde el frontend los escaneos realizados anteriormente; mientras que el sistema deberá mostrar los registros almacenados junto con la información correspondiente a cada ejecución, permitiendo conocer cuándo se realizó y qué resultados fueron obtenidos.
+La validación se realizará utilizando el mecanismo de persistencia implementado en NetGuard mediante SQLite y SQLAlchemy, verificando que los resultados de los escaneos sean almacenados y posteriormente recuperados correctamente. Además, el historial permitirá al administrador realizar seguimiento de las exploraciones efectuadas sobre la red.
+Por último, cada nuevo escaneo deberá quedar disponible en el historial una vez finalice su ejecución y se complete el proceso de almacenamiento.
+
+
+
+
+
+Historia de Usuario
+Número: H04
+Usuario: Administrador de la red
+Nombre de Historia: Filtrar historial de Escaneos
+Prioridad en Negocio: Media
+Riesgo en desarrollo: Bajo
+Puntos Estimados: 3
+Interacción Asignada: 1
+Programador Responsable: Equipo de desarrollo de NetGuard
+Descripción: Como administrador de red, me gustaría filtrar el historial de escaneos para encontrar rápidamente la información que necesito.
+Validación: El administrador podrá filtrar los registros disponibles en el historial desde el frontend; mientras que el sistema deberá mostrar únicamente los resultados que correspondan a los criterios seleccionados por el usuario.
+La validación se realizará mediante la información almacenada en el historial de NetGuard, comprobando que los filtros aplicados permitan localizar los registros requeridos sin modificar la información original de los escaneos. Además, esta funcionalidad permitirá reducir el tiempo necesario para encontrar ejecuciones específicas dentro del historial.
+Por último, los resultados filtrados deberán mostrarse en el frontend inmediatamente después de aplicar los criterios de búsqueda establecidos.
+
+
+
+Historia de Usuario
+
+Número: H05
+
+Usuario: Administrador de la red
+
+Nombre de Historia: Consultar inventario de dispositivos
+
+Prioridad en Negocio: Alta
+
+Riesgo en desarrollo: Medio
+
+Puntos Estimados: 5
+
+Interacción Asignada: 1
+
+Programador Responsable: Equipo de desarrollo de NetGuard
+
+Descripción: Como administrador de red, me gustaría consultar un inventario de los dispositivos identificados para mantener un registro organizado de los equipos que fueron detectados en la red.
+
+Validación:  El administrador podrá consultar y administrar el inventario de dispositivos identificados por NetGuard; mientras que el sistema deberá conservar la información de los dispositivos detectados y permitir su consulta desde el frontend.
+La validación se realizará utilizando el modelo de dispositivos y los mecanismos de persistencia implementados en NetGuard, verificando que los dispositivos identificados durante los escaneos puedan ser almacenados y posteriormente consultados. Además, el inventario permitirá al administrador mantener una referencia de los dispositivos que han sido identificados dentro de la red.
+Por último, cada dispositivo detectado deberá incorporarse o actualizarse en el inventario una vez finalice el proceso de escaneo correspondiente.
+
+
+
+Historia de Usuario
+
+Número: H06
+
+Usuario: Administrador de la red
+
+Nombre de Historia: Asignar alias y estado de confianza
+
+Prioridad en Negocio: Media
+
+Riesgo en desarrollo: Medio
+
+Puntos Estimados: 3
+
+Interacción Asignada: 1
+
+Programador Responsable: Equipo de desarrollo de NetGuard
+
+Descripción: Como administrador de red, quisiera asignar un alias a los dispositivos con la finalidad de diferenciarlo y marcar un dispositivo como confiable para identificarlo fácilmente dentro del inventario.
+
+Validación:El administrador podrá personalizar la información de los dispositivos registrados mediante la asignación de un alias y la identificación de dispositivos de confianza; mientras que el sistema deberá conservar estos cambios y mostrarlos posteriormente en el inventario.
+La validación se realizará mediante las funcionalidades de actualización de dispositivos implementadas en NetGuard, verificando que los cambios realizados sobre el alias y el estado de confianza sean almacenados correctamente. Además, esta funcionalidad permitirá al administrador reconocer con mayor facilidad los dispositivos conocidos y diferenciarlos de aquellos que no reconoce.
+Por último, los cambios realizados deberán quedar almacenados y ser visibles nuevamente al consultar el inventario del dispositivo.
+
+
+
+
+
+
+
+
+Historia de Usuario
+
+Número: H07
+
+Usuario: Administrador de la red
+
+Nombre de Historia: Visualizar estadística de los escaneos
+
+Prioridad en Negocio: Media
+
+Riesgo en desarrollo: Bajo
+
+Puntos Estimados: 3
+
+Interacción Asignada: 1
+
+Programador Responsable: Equipo de desarrollo de NetGuard
+
+Descripción: Como administrador de red, me gustaría visualizar estadísticas de los escaneos realizados para obtener una visión general del comportamiento de la red monitoreada.
+
+Validación: El administrador podrá consultar estadísticas relacionadas con los dispositivos y escaneos realizados desde el apartado de análisis del frontend; mientras que el sistema deberá presentar las métricas calculadas a partir de la información almacenada en NetGuard.
+La validación se realizará utilizando los datos obtenidos de los escaneos y almacenados por el sistema, verificando que las estadísticas mostradas correspondan con la información registrada. Además, esta funcionalidad permitirá al administrador obtener una visión general del estado y comportamiento de los dispositivos identificados en la red.
+Por último, las estadísticas deberán actualizarse cuando existan nuevos resultados de escaneo disponibles para su procesamiento.
+
+
+
+
+Historia de Usuario
+
+Número: H08
+
+Usuario: Administrador de la red
+
+Nombre de Historia: Recibir información sobre errores del escaneo
+
+Prioridad en Negocio: Alta
+
+Riesgo en desarrollo: Medio
+
+Puntos Estimados: 3
+
+Interacción Asignada: 1
+
+Programador Responsable: Equipo de desarrollo de NetGuard
+
+Descripción: Como administrador de red, me gustaría recibir información clara cuando ocurre un error durante un escaneo, con la finalidad de conocer el problema concreto y tomar las acciones necesarias.
+
+Validación: El administrador deberá recibir información clara cuando se presente un error durante el proceso de escaneo; mientras que el sistema deberá identificar y controlar las situaciones de error contempladas, mostrando un mensaje correspondiente sin interrumpir de forma inesperada la aplicación.
+La validación se realizará utilizando el sistema de excepciones implementado en el backend de NetGuard, incluyendo los casos relacionados con objetivos inválidos, ausencia de Nmap, tiempos de espera agotados y fallos durante el escaneo. Además, esta funcionalidad permitirá al administrador conocer la causa general del problema y tomar las acciones correspondientes.
+Por último, el mensaje de error deberá mostrarse al usuario inmediatamente después de que el sistema identifique la situación que impide completar correctamente el escaneo.
+
+
+
+Historia de Usuario
+
+Número: H09
+
+Usuario: Administrador de la red
+
+Nombre de Historia: Validar conexión antes del escaneo
+
+Prioridad en Negocio: Alta
+
+Riesgo en desarrollo: Medio
+
+Puntos Estimados: 5
+
+Interacción Asignada: 1
+
+Programador Responsable: Equipo de desarrollo de NetGuard
+
+Descripción: Como administrador de red, me gustaría que NetGuard compruebe si el equipo este conectado a una red (sin importar que tenga señal wi-fi o no), antes de iniciar un escaneo para evitar ejecuciones innecesarias y recibir una indicación cuando deba conectarme a una red.
+
+Validación: El administrador no podrá iniciar un escaneo cuando el equipo no se encuentre conectado a ninguna red; mientras que el sistema deberá detectar esta condición y mostrar un aviso indicando que es necesario conectarse a una red antes de realizar el escaneo.
+La validación se realizará comprobando el estado de las interfaces de red del equipo antes de iniciar el proceso de escaneo, diferenciando la ausencia de conexión de red de una situación en la que existe conexión pero no se dispone de acceso a Internet. Además, esta funcionalidad permitirá evitar la ejecución de escaneos innecesarios cuando no exista una red disponible para analizar.
+Por último, la comprobación deberá realizarse antes de iniciar cada escaneo y el aviso deberá mostrarse inmediatamente cuando no se detecte una conexión de red disponible.
+
+
+
+
+
+Historia de Usuario / En proceso de desarrollo
+
+Número: H10
+
+Usuario: Administrador de la red
+
+Nombre de Historia: Detectar nuevos dispositivos conectados
+
+Prioridad en Negocio: Alta
+
+Riesgo en desarrollo: Medio
+
+Puntos Estimados: 8
+
+Interacción Asignada: 1
+
+Programador Responsable: Equipo de desarrollo de NetGuard
+
+Descripción: Como administrador de red, me gustaría que NetGuard realice escaneos periódicos de la red para detectar cuando un nuevo dispositivo se conecta y poderlo identificar oportunamente.
+
+Validación: El administrador podrá mantener activo un mecanismo de monitoreo periódico de la red; mientras que el sistema deberá ejecutar escaneos de manera automática y comparar los resultados obtenidos con los dispositivos registrados anteriormente para identificar aquellos que sean nuevos.
+La validación se realizará reutilizando las funcionalidades de escaneo, identificación y persistencia existentes en NetGuard, verificando que un dispositivo cuya dirección MAC no se encuentre previamente registrada sea identificado como nuevo. Además, esta funcionalidad permitirá al administrador conocer oportunamente la incorporación de nuevos dispositivos sin depender exclusivamente de la ejecución manual de un escaneo.
+Por último, el sistema deberá realizar cada escaneo dentro del intervalo de tiempo establecido y detectar el nuevo dispositivo durante el ciclo de monitoreo posterior a su conexión a la red.
+
+
+
+Historia de Usuario
+
+Número: H11
+
+Usuario: Administrador de la red
+
+Nombre de Historia: Notificar nuevos dispositivos detectados
+
+Prioridad en Negocio: Alta
+
+Riesgo en desarrollo: Alto
+
+Puntos Estimados: 5
+
+Interacción Asignada: 1
+
+Programador Responsable: Equipo de desarrollo de NetGuard
+
+Descripción: Como administrador de red, me gustaría iniciar un escaneo de la red desde NetGuard para identificar los dispositivos conectados y obtener información básica sobre ellos, con la finalidad de también conocer puntos abiertos.
+
+Validación: Al iniciar un escaneo, el sistema debe detectar los hosts disponibles y mostrar la información de cada dispositivo. Si el objetivo de escaneo no es válido, el sistema debe informar el error correspondiente y detallado sin limitarse a un simple “Error 505”
