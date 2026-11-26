@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard - Sustentación Oral Segundo Corte</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #0B0F19;
+      --bg-card: #111827;
+      --bg-card-hover: #1F2937;
+      --border-color: #374151;
+      --border-light: rgba(255, 255, 255, 0.1);
+      --text-main: #F9FAFB;
+      --text-muted: #9CA3AF;
+      --text-dim: #6B7280;
+      --primary: #10B981;
+      --primary-glow: rgba(16, 185, 129, 0.2);
+      --secondary: #3B82F6;
+      --secondary-glow: rgba(59, 130, 246, 0.2);
+      --accent: #8B5CF6;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* TOP NAVBAR */
+    header.deck-header {
+      height: 52px;
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 50;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: #fff;
+      font-size: 0.7rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .deck-meta {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .meta-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border-light);
+    }
+
+    /* CONTROLS & TIMER */
+    .timer-badge {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 6px;
+      background: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .timer-badge.warning { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border-color: #f59e0b; }
+    .timer-badge.danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border-color: #ef4444; animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* SLIDE STAGE */
+    main.stage {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 40px;
+    }
+
+    .slide {
+      position: absolute;
+      width: 100%;
+      max-width: 1380px;
+      height: calc(100vh - 120px);
+      max-height: 820px;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0;
+      transform: translateY(12px) scale(0.99);
+      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 10;
+    }
+
+    .slide.active {
+      display: flex;
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      z-index: 20;
+    }
+
+    /* SLIDE HEADER */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+    }
+
+    .slide-title-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slide-subtitle {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .slide-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .presenter-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #93c5fd;
+    }
+
+    .presenter-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #3b82f6;
+      box-shadow: 0 0 8px #3b82f6;
+    }
+
+    /* SLIDE BODY */
+    .slide-body {
+      flex: 1;
+      display: flex;
+      gap: 24px;
+      min-height: 0;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    /* CUSTOM SCROLLBAR */
+    .slide-body::-webkit-scrollbar {
+      width: 6px;
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+      background: #374151;
+      border-radius: 3px;
+    }
+
+    /* CARDS & CONTAINERS */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .card.primary-card {
+      border-color: rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.08);
+    }
+
+    .col-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      width: 100%;
+    }
+
+    .col-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      width: 100%;
+    }
+
+    .col-left-wide {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+      width: 100%;
+    }
+
+    /* BULLETS & TYPOGRAPHY */
+    .bullet-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .bullet-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.93rem;
+      line-height: 1.45;
+      color: #E5E7EB;
+    }
+
+    .bullet-icon {
+      flex-shrink: 0;
+      margin-top: 3px;
+      color: var(--primary);
+    }
+
+    .bullet-item strong {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* KPI METRICS */
+    .kpi-box {
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .kpi-box:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .kpi-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      line-height: 1;
+      margin: 8px 0;
+    }
+
+    .kpi-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .kpi-sub {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    /* SPEAKER NOTES MODAL / DRAWER */
+    .speech-drawer {
+      margin-top: 14px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-left: 4px solid var(--secondary);
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .speech-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #93c5fd;
+    }
+
+    .speech-text {
+      font-size: 0.86rem;
+      line-height: 1.45;
+      color: #cbd5e1;
+      font-style: italic;
+    }
+
+    /* BOTTOM BAR */
+    footer.deck-footer {
+      height: 48px;
+      background: rgba(17, 24, 39, 0.9);
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 50;
+      flex-shrink: 0;
+    }
+
+    .nav-btn-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      background: #1f2937;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn:hover {
+      background: #374151;
+      border-color: #4b5563;
+    }
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: #10b981;
+      color: #064e3b;
+      border-color: #059669;
+      font-weight: 700;
+    }
+    .btn-primary:hover {
+      background: #34d399;
+      color: #022c22;
+    }
+
+    .progress-track {
+      flex: 1;
+      max-width: 380px;
+      height: 6px;
+      background: #1f2937;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin: 0 20px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10B981, #3B82F6);
+      width: 12.5%;
+      transition: width 0.3s ease;
+    }
+
+    .slide-counter {
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* TABLE STYLES */
+    .clean-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .clean-table th {
+      background: #1e293b;
+      color: #94a3b8;
+      text-align: left;
+      padding: 8px 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .clean-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #1f2937;
+      color: #e2e8f0;
+      vertical-align: top;
+    }
+    .clean-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* GANTT SVG & BADGES */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .badge-success { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .badge-warning { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge-info { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+    .badge-purple { background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.4); }
+
+    /* INTEGRATION PIPELINE */
+    .pipe-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 10px;
+      padding: 16px 12px;
+      position: relative;
+      flex: 1;
+    }
+    .pipe-step::after {
+      content: "➔";
+      position: absolute;
+      right: -16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #10B981;
+      font-size: 1.2rem;
+      font-weight: 900;
+      z-index: 5;
+    }
+    .pipe-step:last-child::after {
+      display: none;
+    }
+
+    /* MODAL OVERLAY (OVERVIEW) */
+    .overview-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      padding: 40px;
+      overflow-y: auto;
+    }
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .overview-thumb {
+      background: #111827;
+      border: 2px solid #374151;
+      border-radius: 10px;
+      padding: 16px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .overview-thumb:hover {
+      border-color: #10B981;
+      transform: scale(1.03);
+    }
+    .overview-thumb.current {
+      border-color: #3B82F6;
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+    }
+
+    @media print {
+      body { overflow: visible; height: auto; }
+      header.deck-header, footer.deck-footer, .speech-drawer { display: none !important; }
+      .slide { position: static !important; display: flex !important; opacity: 1 !important; page-break-after: always; height: 100vh; max-height: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="deck-header">
+    <div class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="m9 12 2 2 4-4"/>
+      </svg>
+      <span>NetGuard</span>
+      <span class="brand-badge">Sustentación C2</span>
+    </div>
+
+    <div class="deck-meta">
+      <span class="meta-tag">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+        Formulación y Evaluación de Proyectos
+      </span>
+      <span class="meta-tag">
+        👨‍🏫 Docente: Julio Ricardo Martínez Montezuma
+      </span>
+      <div id="timerDisplay" class="timer-badge" title="Clic para pausar/reanudar temporizador">
+        ⏱️ <span id="timerText">00:00</span> / 08:00
+      </div>
+    </div>
+  </header>
+
+  <!-- STAGE -->
+  <main class="stage">
+
+    <!-- SLIDE 1 -->
+    <section class="slide active" id="slide-1" data-index="1">
+      <div class="slide-header">
+        <div class="slide-title-wrap">
+          <span class="slide-subtitle">Diapositiva 1 · Introducción y Alcance</span>
+          <h1 class="slide-title">NetGuard: Descubrimiento y Monitoreo de Redes Locales</h1>
+        </div>
+        <div class="presenter-badge">
+          <span class="presenter-dot"></span>
+          🎙️ Presenta: Juan Esteban Colorado
+        </div>
+      </div>
+
+      <div class="slide-body">
+        <div class="col-left-wide">
+          <div class="card primary-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                <span class="badge badge-success">Iniciativa I+D</span>
+                <span style="color:var(--text-muted); font-size:0.85rem;">BlackCircuit Paradigm S.A.S. · Popayán, Cauca</span>
+              </div>
+              <h2 style="font-size:1.45rem; font-weight:700; color:#fff; line-height:1.3; margin-bottom:16px;">
+                Gestión Centralizada y Visibilidad en Tiempo Real para Redes Privadas y Domésticas
+              </h2>
+              <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-light); border-radius:8px; padding:16px; margin-bottom:16px;">
+                <span style="font-size:0.75rem; color:#34d399; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:6px;">Objetivo General del Proyecto</span>
+                <p style="font-size:0.96rem; line-height:1.5; color:#F3F4F6;">
+                  Desarrollar una herramienta informática automatizada para la <strong>identificación, monitoreo y gestión</strong> de dispositivos y servicios en redes locales, optimizando los tiempos de consulta y fortaleciendo la visibilidad y el control sobre la infraestructura de red en un periodo de <strong>17 semanas</strong>.
+                </p>
+              </div>
+            </div>
+
+            <ul class="bullet-list">
+              <li class="bullet-item">
+                <span class="bullet-icon">⚡</span>
+                <span><strong>Propósito Central:</strong> Superar la dependencia de comandos de consola dispersos, automatizando el descubrimiento dinámico mediante un pipeline estructurado.</span>
+              </li>
+              <li class="bullet-item">
+                <span class="bullet-icon">🛡️</span>
+                <span><strong>Enfoque en Ciberseguridad:</strong> Detección oportuna de dispositivos no autorizados (<em>untrusted</em>) y reducción de superficie de ataque por puertos expuestos.</span>
+              </li>
+            </ul>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div class="card" style="border-left: 4px solid var(--primary);">
+              <span class="kpi-label">Equipo Formulador</span>
+              <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <strong style="color:#fff; font-size:0.95rem;">Juan Esteban Colorado Coral</strong>
+                  <span class="badge badge-info">Frontend & UI</span>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <strong style="color:#fff; font-size:0.95rem;">Daniel Alexander Cobo Arboleda</strong>
+                  <span class="badge badge-purple">Backend & Datos</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="background:linear-gradient(135deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9));">
+              <span class="kpi-label">Ficha Metodológica</span>
+              <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.83rem;">
+                <div>
+                  <span style="color:var(--text-dim); display:block;">Metodología:</span>
+                  <span style="color:#e2e8f0; font-weight:600;">Ágil / Scrum (H01-H11)</span>
+                </div>
+                <div>
+                  <span style="color:var(--text-dim); display:block;">Horizonte Gantt:</span>
+                  <span style="color:#38bdf8; font-weight:600;">17 Semanas (Ago - Nov)</span>
+                </div>
+                <div>
+                  <span style="color:var(--text-dim); display:block;">Estándar Calidad:</span>
+                  <span style="color:#a78bfa; font-weight:600;">ISO/IEC 25010 / Pytest</span>
+                </div>
+                <div>
+                  <span style="color:var(--text-dim); display:block;">Fecha de Corte:</span>
+                  <span style="color:#34d399; font-weight:600;">15 de Octubre 2026</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="speech-drawer">
+        <div class="speech-header">
+          <span>🎙️ Speech Sugerido (Juan Esteban Colorado) · Duración estimada: 45 seg</span>
+          <span style="font-family:var(--font-mono); font-size:0.75rem;">Tiempo acumulado: 0:45</span>
+        </div>
+        <p class="speech-text">
+          "Buenos días profesor y compañeros. Damos inicio a la sustentación del proyecto NetGuard, formulado en el marco de la iniciativa BlackCircuit Paradigm S.A.S. en Popayán. Nuestro proyecto nace al constatar que la mayoría de redes locales se administran a ciegas o mediante comandos de consola manuales y lentos. Nuestro objetivo general no es solo escribir código, sino formular y ejecutar un proyecto de ingeniería estructurado que permita descubrir, identificar y monitorear dispositivos en tiempo real, garantizando confiabilidad y visibilidad en 17 semanas de desarrollo."
+        </p>
+      </div>
+    </section>
+
+    <!-- SLIDE 2 -->
+    <section class="slide" id="slide-2" data-index="2">
+      <div class="slide-header">
+        <div class="slide-title-wrap">
+          <span class="slide-subtitle">Diapositiva 2 · Diagnóstico y Contexto</span>
+          <h1 class="slide-title">Justificación: La Necesidad Real de Visibilidad en Red</h1>
+        </div>
+        <div class="presenter-badge">
+          <span class="presenter-dot"></span>
+          🎙️ Presenta: Daniel Alexander Cobo
+        </div>
+      </div>
+
+      <div class="slide-body">
+        <div class="col-2">
+          <!-- Columna Izq: Problema y Evidencia de Campo -->
+          <div class="card" style="display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <span class="badge badge-warning" style="margin-bottom:10px;">Problema Central Identificado</span>
+              <p style="font-size:0.95rem; color:#F3F4F6; margin-top:8px; line-height:1.45;">
+                Dificultad operativa para realizar oportunamente la identificación, consulta y monitoreo de dispositivos en redes locales, provocando <strong>ceguera sobre equipos no autorizados</strong> e incremento del tiempo de respuesta.
+              </p>
+              
+              <div style="margin-top:16px; background:rgba(239, 68, 68, 0.08); border:1px solid rgba(239, 68, 68, 0.3); border-radius:8px; padding:14px;">
+                <span style="color:#f87171; font-weight:700; font-size:0.8rem; text-transform:uppercase; display:block; margin-bottom:4px;">Evidencia Empírica de Diagnóstico</span>
+                <p style="font-size:0.88rem; color:#e2e8f0; line-height:1.4;">
+                  En pruebas de campo en un entorno real administrado, el usuario esperaba encontrar <strong>5 dispositivos</strong>, pero los escaneos comprobaron de forma constante <strong>8 dispositivos activos</strong>.
+                </p>
+                <div style="display:flex; gap:10px; margin-top:8px;">
+                  <span class="badge badge-danger">3 Equipos Invisibles</span>
+                  <span class="badge badge-info">3 Escaneos Confirmatorios</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:14px; font-size:0.85rem; color:var(--text-muted);">
+              <strong>Pipeline de Solución:</strong> Descubrir ➔ Identificar ➔ Analizar ➔ Registrar ➔ Monitorear ➔ Alertar.
+            </div>
+          </div>
+
+          <!-- Columna Der: Cifras de Ciberriesgo -->
+          <div style="display:grid; grid-template-rows:repeat(3, 1fr); gap:12px;">
+            <div class="kpi-box" style="border-left:4px solid #10B981;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="kpi-label">Penetración de Internet (DANE)</span>
+                <span class="badge badge-success">+3.5M Hogares</span>
+              </div>
+              <div class="kpi-value" style="color:#10B981;">73,9%</div>
+              <span class="kpi-sub">De hogares colombianos conectados; crecimiento masivo de dispositivos IoT domésticos sin gestión técnica.</span>
+            </div>
+
+            <div class="kpi-box" style="border-left:4px solid #EF4444;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="kpi-label">Delitos Informáticos (Policía Nacional)</span>
+                <span class="badge badge-danger">+23% vs 2023</span>
+              </div>
+              <div class="kpi-value" style="color:#EF4444;">77.666</div>
+              <span class="kpi-sub">Denuncias formales en Colombia (2024). Sumado a 10,9 billones de intentos de ciberataques (FortiGuard 2026).</span>
+            </div>
+
+            <div class="kpi-box" style="border-left:4px solid #F59E0B;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="kpi-label">Indiferencia del Usuario (Kaspersky)</span>
+                <span class="badge badge-warning">Riesgo Cultural</span>
+              </div>
+              <div class="kpi-value" style="color:#F59E0B;">1 de cada 4</div>
+              <span class="kpi-sub">Usuarios en Latam es indiferente ante accesos no autorizados a su red. Solo 23,7% aplica controles de acceso.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="speech-drawer">
+        <div class="speech-header">
+          <span>🎙️ Speech Sugerido (Daniel Alexander Cobo) · Duración estimada: 1 min</span>
+          <span style="font-family:var(--font-mono); font-size:0.75rem;">Tiempo acumulado: 1:45</span>
+        </div>
+        <p class="speech-text">
+          "Para justificar NetGuard partimos de hechos y evidencias concretas. El problema real no es la falta de herramientas de red, sino que las actuales exigen consola, entregan salidas dispersas y demandan demasiado tiempo de interpretación. Esto lo evidenciamos en campo: un usuario creía tener solo 5 dispositivos en su red, y al escanear descubrimos 8 equipos activos permanentes; es decir, un 37% de la red estaba oculta. Si a esto le sumamos que el DANE registra un 74% de hogares conectados y la Policía Nacional reporta más de 77.000 delitos informáticos con un alza del 23%, es evidente que se necesita una herramienta que automatice el pipeline de visibilidad y reduzca el esfuerzo administrativo."
+        </p>
+      </div>
+    </section>
+
+    <!-- SLIDE 3 -->
+    <section class="slide" id="slide-3" data-index="3">
+      <div class="slide-header">
+        <div class="slide-title-wrap">
+          <span class="slide-subtitle">Diapositiva 3 · Formulación SMART</span>
+          <h1 class="slide-title">Objetivos SMART: Respuestas a las Causas Raíz</h1>
+        </div>
+        <div class="presenter-badge">
+          <span class="presenter-dot"></span>
+          🎙️ Presenta: Juan Esteban Colorado
+        </div>
+      </div>
+
+      <div class="slide-body">
+        <div style="display:flex; flex-direction:column; gap:14px; width:100%;">
+          <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:8px; padding:10px 16px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.85rem; color:#93c5fd;"><strong>Objetivo General:</strong> Desarrollar la herramienta informática para descubrir, monitorear y gestionar redes locales en 17 semanas.</span>
+            <span class="badge badge-info">100% Alineado con Árbol de Problemas</span>
+          </div>
+
+          <table class="clean-table" style="background:var(--bg-card); border-radius:10px; overflow:hidden;">
+            <thead>
+              <tr>
+                <th style="width: 25%;">Causa Raíz Diagnosticada</th>
+                <th style="width: 55%;">Objetivo Específico SMART Formulado</th>
+                <th style="width: 20%;">Criterio & Plazo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong style="color:#f87171;">Causa 1:</strong> Información dispersa y falta de inventario centralizado.</td>
+                <td>
+                  <strong>OE1 (Frontend/Visualización):</strong> Diseñar e implementar un dashboard centralizado en React 19 y Tailwind CSS que consolide el 100% de los datos de dispositivos (IP, MAC, vendor, puertos) reduciendo el tiempo de interpretación a menos de 5 segundos.
+                </td>
+                <td><span class="badge badge-success">Medible</span><br><small style="color:var(--text-dim);">Sem. 8 a 11</small></td>
+              </tr>
+              <tr>
+                <td><strong style="color:#f87171;">Causa 2:</strong> Procesos manuales y lenta ejecución por consola.</td>
+                <td>
+                  <strong>OE2 (Backend/Automatización):</strong> Construir un motor de escaneo automatizado con FastAPI y Nmap CLI que procese la subred local completa persistiendo resultados en SQLite en un tiempo inferior a 120 segundos por escaneo.
+                </td>
+                <td><span class="badge badge-info">Alcanzable</span><br><small style="color:var(--text-dim);">Sem. 5 a 10</small></td>
+              </tr>
+              <tr>
+                <td><strong style="color:#f87171;">Causa 3:</strong> Ausencia de seguimiento a cambios de red y equipos intrusos.</td>
+                <td>
+                  <strong>OE3 (Monitoreo en 2.º Plano):</strong> Implementar un planificador en segundo plano (H10 y H11) que detecte y alerte el 100% de dispositivos nuevos o no confiables mediante comparación de direcciones MAC y marcas temporales.
+                </td>
+                <td><span class="badge badge-warning">Relevante</span><br><small style="color:var(--text-dim);">Sem. 10 a 14</small></td>
+              </tr>
+              <tr>
+                <td><strong style="color:#f87171;">Causa 4:</strong> Dificultad para evaluar confiabilidad y calidad técnica.</td>
+                <td>
+                  <strong>OE4 (Calidad & Estándares):</strong> Validar la confiabilidad bajo ISO/IEC 25010 ejecutando suites de pruebas en Pytest alcanzando <strong>&ge; 80% de cobertura</strong> en backend y <strong>100% de aprobación</strong> antes del 20 de noviembre de 2026.
+                </td>
+                <td><span class="badge badge-purple">Temporal</span><br><small style="color:var(--text-dim);">Sem. 8 a 15</small></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="speech-drawer">
+        <div class="speech-header">
+          <span>🎙️ Speech Sugerido (Juan Esteban Colorado) · Duración estimada: 1 min</span>
+          <span style="font-family:var(--font-mono); font-size:0.75rem;">Tiempo acumulado: 2:45</span>
+        </div>
+        <p class="speech-text">
+          "Cada uno de nuestros objetivos específicos ataca quirúrgicamente una causa del árbol de problemas, cumpliendo la metodología SMART. Frente a los datos dispersos, el OE1 entrega un dashboard centralizado en menos de 5 segundos de lectura. Frente a la lentitud de la consola, el OE2 automatiza el escaneo Nmap en menos de 120 segundos. Frente a la falta de seguimiento, el OE3 introduce tareas en segundo plano para clasificar dispositivos nuevos frente al histórico. Y finalmente, el OE4 garantiza la calidad del software con una meta estricta de 80% de cobertura en Pytest bajo la norma ISO/IEC 25010. Todo medible y temporalmente acotado en el Gantt."
+        </p>
+      </div>
+    </section>
+
+    <!-- SLIDE 4 -->
+    <section class="slide" id="slide-4" data-index="4">
+      <div class="slide-header">
+        <div class="slide-title-wrap">
+          <span class="slide-subtitle">Diapositiva 4 · Medición y Control (10 Pts Rúbrica)</span>
+          <h1 class="slide-title">Sistema de Indicadores: Tiempo, Calidad y Costo</h1>
+        </div>
+        <div class="presenter-badge">
+          <span class="presenter-dot"></span>
+          🎙️ Presenta: Daniel Alexander Cobo
+        </div>
+      </div>
+
+      <div class="slide-body">
+        <div class="col-3">
+          <!-- ICC -->
+          <div class="card" style="border-top: 4px solid #3B82F6; display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span class="badge badge-info">Tiempo & Cronograma</span>
+                <span style="font-family:var(--font-mono); font-weight:800; font-size:1.15rem; color:#38bdf8;">ICC</span>
+              </div>
+              <h3 style="font-size:1.05rem; font-weight:700; color:#fff; margin-bottom:2px;">ICC: Indicador de Cumplimiento del Cronograma</h3>
+              <span style="display:block; font-size:0.74rem; color:#93c5fd; font-weight:600; margin-bottom:8px;">(Avance de Actividades en el Tiempo)</span>
+              <p style="font-size:0.79rem; color:var(--text-muted); line-height:1.35; margin-bottom:10px;">
+                Mide la tasa de actividades ejecutadas frente a las programadas en el Gantt a la fecha de corte.
+              </p>
+              
+              <div style="background:#1e293b; border-radius:6px; padding:9px; font-family:var(--font-mono); font-size:0.76rem; color:#93c5fd; text-align:center; margin-bottom:10px;">
+                ICC = (Actividades Ejecutadas / Actividades Programadas) × 100
+              </div>
+
+              <div style="font-size:0.8rem; display:flex; flex-direction:column; gap:5px;">
+                <div><span style="color:var(--text-dim);">Meta del Proyecto:</span> <strong style="color:#38bdf8;">&ge; 90% (Óptimo 100%)</strong></div>
+                <div><span style="color:var(--text-dim);">Estado al 15 Oct:</span> <strong style="color:#34d399;">100% (9 de 9 concluidas)</strong></div>
+              </div>
+            </div>
+
+            <div style="margin-top:12px; padding-top:8px; border-top:1px solid #1f2937; font-size:0.74rem; color:var(--text-dim);">
+              <strong>Interpretación:</strong> &ge;100% al día o con adelanto; &lt;90% activa alertas y plan de mitigación en la ruta crítica.
+            </div>
+          </div>
+
+          <!-- IEC -->
+          <div class="card" style="border-top: 4px solid #10B981; display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span class="badge badge-success">Alcance & Calidad</span>
+                <span style="font-family:var(--font-mono); font-weight:800; font-size:1.15rem; color:#34d399;">IEC</span>
+              </div>
+              <h3 style="font-size:1.05rem; font-weight:700; color:#fff; margin-bottom:2px;">IEC: Indicador de Eficacia Técnica</h3>
+              <span style="display:block; font-size:0.74rem; color:#6ee7b7; font-weight:600; margin-bottom:8px;">(Calidad del Software y Pruebas)</span>
+              <p style="font-size:0.79rem; color:var(--text-muted); line-height:1.35; margin-bottom:10px;">
+                Mide el grado de conformidad funcional según Historias de Usuario (H01-H11) y pruebas en Pytest (ISO/IEC 25010).
+              </p>
+              
+              <div style="background:#1e293b; border-radius:6px; padding:9px; font-family:var(--font-mono); font-size:0.76rem; color:#6ee7b7; text-align:center; margin-bottom:10px;">
+                IEC = (Historias & Pruebas Aprobadas / Total Comprometidas) × 100
+              </div>
+
+              <div style="font-size:0.8rem; display:flex; flex-direction:column; gap:5px;">
+                <div><span style="color:var(--text-dim);">Meta del Proyecto:</span> <strong style="color:#34d399;">100% Casos Críticos</strong></div>
+                <div><span style="color:var(--text-dim);">Pytest Actual:</span> <strong style="color:#34d399;">25 de 25 pruebas en verde (0.71s)</strong></div>
+              </div>
+            </div>
+
+            <div style="margin-top:12px; padding-top:8px; border-top:1px solid #1f2937; font-size:0.74rem; color:var(--text-dim);">
+              <strong>Interpretación:</strong> 100% certifica entrega sin fallas en el pipeline de escaneo; valores menores señalan deuda técnica.
+            </div>
+          </div>
+
+          <!-- IEP -->
+          <div class="card" style="border-top: 4px solid #F59E0B; display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span class="badge badge-warning">Costo & Recursos</span>
+                <span style="font-family:var(--font-mono); font-weight:800; font-size:1.15rem; color:#fbbf24;">IEP</span>
+              </div>
+              <h3 style="font-size:1.05rem; font-weight:700; color:#fff; margin-bottom:2px;">IEP: Indicador de Eficiencia Presupuestal</h3>
+              <span style="display:block; font-size:0.74rem; color:#fde68a; font-weight:600; margin-bottom:8px;">(Control y Rendimiento del Dinero)</span>
+              <p style="font-size:0.79rem; color:var(--text-muted); line-height:1.35; margin-bottom:10px;">
+                Mide el rendimiento del gasto real ejecutado frente a la asignación presupuestal programada a la fecha.
+              </p>
+              
+              <div style="background:#1e293b; border-radius:6px; padding:9px; font-family:var(--font-mono); font-size:0.76rem; color:#fde68a; text-align:center; margin-bottom:10px;">
+                IEP = (Costo Real Ejecutado / Presupuesto Programado) × 100
+              </div>
+
+              <div style="font-size:0.8rem; display:flex; flex-direction:column; gap:5px;">
+                <div><span style="color:var(--text-dim);">Meta del Proyecto:</span> <strong style="color:#fbbf24;">100% (&plusmn; 5% Tolerancia)</strong></div>
+                <div><span style="color:var(--text-dim);">Ahorro Licencias:</span> <strong style="color:#34d399;">$0 COP (Stack Open Source)</strong></div>
+              </div>
+            </div>
+
+            <div style="margin-top:12px; padding-top:8px; border-top:1px solid #1f2937; font-size:0.74rem; color:var(--text-dim);">
+              <strong>Interpretación:</strong> &gt;105% alerta sobrecostos no contemplados; &lt;95% debe auditarse para descartar retrasos en compras.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="speech-drawer">
+        <div class="speech-header">
+          <span>🎙️ Speech Sugerido (Daniel Alexander Cobo) · Duración estimada: 1 min 15 seg</span>
+          <span style="font-family:var(--font-mono); font-size:0.75rem;">Tiempo acumulado: 4:00</span>
+        </div>
+        <p class="speech-text">
+          "La rúbrica asigna 10 puntos a los indicadores porque sin medición no hay gestión de proyectos. Hemos formulado la tríada fundamental: ICC para el tiempo, IEC para la eficacia técnica y IEP para el costo. En el ICC, al corte del 15 de octubre alcanzamos el 100% de actividades programadas ejecutadas. En el IEC, tenemos una suite de 25 pruebas en Pytest aprobadas en 0.71 segundos, garantizando cero fallos no controlados. Y en el IEP, aseguramos disciplina de gasto: al usar tecnologías abiertas como FastAPI, React y Nmap, eliminamos costos de licencias comerciales y concentramos el presupuesto en talento humano e infraestructura de pruebas."
+        </p>
+      </div>
+    </section>
+
+    <!-- SLIDE 5 -->
+    <section class="slide" id="slide-5" data-index="5">
+      <div class="slide-header">
+        <div class="slide-title-wrap">
+          <span class="slide-subtitle">Diapositiva 5 · Planificación Temporal y Sprints</span>
+          <h1 class="slide-title">Cronograma Oficial: Roadmap de Sprints en Metodología Scrum</h1>
+        </div>
+        <div class="presenter-badge">
+          <span class="presenter-dot"></span>
+          🎙️ Presenta: Juan Esteban Colorado
+        </div>
+      </div>
+
+      <div class="slide-body">
+        <div style="display:flex; flex-direction:column; gap:12px; width:100%;">
+          <!-- SVG GANTT DIAGRAM -->
+          <div class="card" style="padding:14px; background:#0f172a; border-color:#334155;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:0.8rem; font-weight:700; color:#e2e8f0; text-transform:uppercase;">Roadmap de Sprints y Fases de Trabajo (Agosto – Noviembre 2026)</span>
+              <div style="display:flex; gap:12px; font-size:0.72rem;">
+                <span style="display:flex; align-items:center; gap:4px;"><span style="width:10px; height:10px; background:#10B981; border-radius:2px;"></span> Completado</span>
+                <span style="display:flex; align-items:center; gap:4px;"><span style="width:10px; height:10px; background:#F59E0B; border-radius:2px;"></span> En Curso</span>
+                <span style="display:flex; align-items:center; gap:4px;"><span style="width:10px; height:10px; background:#64748B; border-radius:2px;"></span> Planificado</span>
+                <span style="display:flex; align-items:center; gap:4px;"><span style="width:2px; height:12px; background:#EF4444;"></span> Línea de Corte (15 Oct)</span>
+              </div>
+            </div>
+
+            <!-- SVG REPLICA OF GANTT -->
+            <svg viewBox="0 0 960 320" style="width:100%; height:auto; font-family:var(--font-sans); font-size:10px;">
+              <!-- Background grid & months -->
+              <rect x="250" y="0" width="710" height="320" fill="#1e293b" opacity="0.4"/>
+              
+              <!-- Month dividers -->
+              <line x1="250" y1="20" x2="250" y2="320" stroke="#334155" stroke-dasharray="2,2"/>
+              <text x="310" y="15" fill="#94a3b8" font-weight="bold">Agosto (Sem 1-4)</text>
+              <line x1="425" y1="20" x2="425" y2="320" stroke="#334155" stroke-dasharray="2,2"/>
+              <text x="495" y="15" fill="#94a3b8" font-weight="bold">Septiembre (Sem 5-8)</text>
+              <line x1="610" y1="20" x2="610" y2="320" stroke="#334155" stroke-dasharray="2,2"/>
+              <text x="670" y="15" fill="#94a3b8" font-weight="bold">Octubre (Sem 9-13)</text>
+              <line x1="790" y1="20" x2="790" y2="320" stroke="#334155" stroke-dasharray="2,2"/>
+              <text x="830" y="15" fill="#94a3b8" font-weight="bold">Noviembre (Sem 14-17)</text>
+
+              <!-- LINEA DE CORTE: HOY 15 OCT -->
+              <line x1="705" y1="20" x2="705" y2="310" stroke="#EF4444" stroke-width="2" stroke-dasharray="4,3"/>
+              <rect x="675" y="2" width="60" height="15" rx="3" fill="#EF4444"/>
+              <text x="705" y="13" fill="#ffffff" font-weight="bold" text-anchor="middle" font-size="8">Hoy 15 oct</text>
+
+              <!-- BARS -->
+              <!-- 1. Formulación -->
+              <text x="10" y="38" fill="#e2e8f0" font-weight="600">1. Planteamiento y justificación</text>
+              <rect x="250" y="28" width="80" height="13" rx="3" fill="#10B981"/>
+              <text x="335" y="38" fill="#a7f3d0" font-size="8">3/8 - 27/8</text>
+
+              <text x="10" y="58" fill="#e2e8f0" font-weight="600">   Actores, casos e historias (H01-H11)</text>
+              <rect x="270" y="48" width="65" height="13" rx="3" fill="#10B981"/>
+              <text x="340" y="58" fill="#a7f3d0" font-size="8">10/8 - 28/8</text>
+
+              <!-- 2. Diseño -->
+              <text x="10" y="78" fill="#e2e8f0" font-weight="600">2. Modelo MER y diccionario</text>
+              <rect x="300" y="68" width="60" height="13" rx="3" fill="#10B981"/>
+              <text x="365" y="78" fill="#a7f3d0" font-size="8">17/8 - 4/9</text>
+
+              <text x="10" y="98" fill="#e2e8f0" font-weight="600">   Arquitectura y stack</text>
+              <rect x="330" y="88" width="50" height="13" rx="3" fill="#10B981"/>
+              <text x="385" y="98" fill="#a7f3d0" font-size="8">24/8 - 4/9</text>
+
+              <!-- 3. Backend -->
+              <text x="10" y="118" fill="#e2e8f0" font-weight="600">3. Scanner Nmap + fingerprinting</text>
+              <rect x="365" y="108" width="115" height="13" rx="3" fill="#10B981"/>
+              <text x="485" y="118" fill="#a7f3d0" font-size="8">31/8 - 25/9</text>
+
+              <text x="10" y="138" fill="#e2e8f0" font-weight="600">   Persistencia SQLite/ORM</text>
+              <rect x="390" y="128" width="105" height="13" rx="3" fill="#10B981"/>
+              <text x="500" y="138" fill="#a7f3d0" font-size="8">7/9 - 30/9</text>
+
+              <text x="10" y="158" fill="#e2e8f0" font-weight="600">   API REST FastAPI & errores</text>
+              <rect x="420" y="148" width="125" height="13" rx="3" fill="#10B981"/>
+              <text x="550" y="158" fill="#a7f3d0" font-size="8">14/9 - 9/10</text>
+
+              <!-- 4. Frontend -->
+              <text x="10" y="178" fill="#e2e8f0" font-weight="600">4. Dashboard, Dispositivos, Historial</text>
+              <rect x="450" y="168" width="95" height="13" rx="3" fill="#10B981"/>
+              <text x="550" y="178" fill="#a7f3d0" font-size="8">21/9 - 9/10</text>
+
+              <text x="10" y="198" fill="#e2e8f0" font-weight="600">   Analytics & validación de red</text>
+              <rect x="520" y="188" width="60" height="13" rx="3" fill="#10B981"/>
+              <text x="585" y="198" fill="#a7f3d0" font-size="8">1/10 - 14/10</text>
+
+              <!-- 5. Monitoreo -->
+              <text x="10" y="218" fill="#fde68a" font-weight="700">5. Tareas 2.º plano & planificador (H10)</text>
+              <rect x="545" y="208" width="85" height="13" rx="3" fill="#F59E0B"/>
+              <text x="635" y="218" fill="#fde68a" font-size="8">5/10 - 23/10</text>
+
+              <text x="10" y="238" fill="#94a3b8" font-weight="500">   Notificación nuevos disp. (H11)</text>
+              <rect x="630" y="228" width="95" height="13" rx="3" fill="#64748B"/>
+              <text x="730" y="238" fill="#cbd5e1" font-size="8">19/10 - 6/11</text>
+
+              <!-- 6. Calidad -->
+              <text x="10" y="258" fill="#fde68a" font-weight="700">6. Pruebas unitarias Pytest</text>
+              <rect x="450" y="248" width="220" height="13" rx="3" fill="#F59E0B"/>
+              <text x="675" y="258" fill="#fde68a" font-size="8">21/9 - 6/11</text>
+
+              <text x="10" y="278" fill="#fde68a" font-weight="700">   Documentación técnica de contexto</text>
+              <rect x="580" y="268" width="150" height="13" rx="3" fill="#F59E0B"/>
+              <text x="735" y="278" fill="#fde68a" font-size="8">12/10 - 13/11</text>
+
+              <!-- 7. Cierre -->
+              <text x="10" y="298" fill="#94a3b8" font-weight="500">7. Ajustes finales & despliegue prueba</text>
+              <rect x="740" y="288" width="60" height="13" rx="3" fill="#64748B"/>
+              <text x="805" y="298" fill="#cbd5e1" font-size="8">9/11 - 20/11</text>
+
+              <text x="10" y="315" fill="#94a3b8" font-weight="500">   Entrega & sustentación</text>
+              <rect x="805" y="305" width="40" height="10" rx="3" fill="#64748B"/>
+              <text x="850" y="315" fill="#cbd5e1" font-size="8">23/11 - 27/11</text>
+            </svg>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; font-size:0.83rem;">
+            <div style="background:var(--bg-card); padding:10px; border-radius:6px; border:1px solid #374151;">
+              <strong style="color:#10B981;">Enfoque Scrum:</strong> El cronograma opera como un Release Plan donde el Backlog (H01-H11) se ejecuta en Sprints iterativos con entregables incrementales.
+            </div>
+            <div style="background:var(--bg-card); padding:10px; border-radius:6px; border:1px solid #374151;">
+              <strong style="color:#F59E0B;">Estado al Corte (15 Oct):</strong> Sprints de Descubrimiento, Backend y Dashboard al 100%; Sprint de Monitoreo (H10) y Pytest en ejecución activa.
+            </div>
+            <div style="background:var(--bg-card); padding:10px; border-radius:6px; border:1px solid #374151;">
+              <strong style="color:#38bdf8;">Definition of Done (DoD):</strong> Cada historia exige código testeado con Pytest (ISO/IEC 25010), integrado y documentado antes de cerrar el Sprint.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="speech-drawer">
+        <div class="speech-header">
+          <span>🎙️ Speech Sugerido (Juan Esteban Colorado) · Duración estimada: 1 min</span>
+          <span style="font-family:var(--font-mono); font-size:0.75rem;">Tiempo acumulado: 5:00</span>
+        </div>
+        <p class="speech-text">
+          "En pantalla observan el cronograma oficial de NetGuard, que en nuestro marco ágil Scrum funciona como la Hoja de Ruta o Release Plan a lo largo de 17 semanas. En lugar de un modelo rígido, organizamos el Product Backlog con 11 historias de usuario estimadas en Story Points dentro de Sprints iterativos. Esto explica la concurrencia entre Backend y Frontend: en Scrum generamos incrementos funcionales testeados en cada ciclo, permitiendo validar la interfaz de usuario con semanas de anticipación. En la línea roja de corte al 15 de octubre, los Sprints de formulación, backend y frontend están 100% concluidos, y actualmente ejecutamos el Sprint de monitoreo continuo para la historia H10 y las pruebas Pytest."
+        </p>
+      </div>
+    </section>
+
+    <!-- SLIDE 6 -->
+    <section class="slide" id="slide-6" data-index="6">
+      <div class="slide-header">
+        <div class="slide-title-wrap">
+          <span class="slide-subtitle">Diapositiva 6 · Viabilidad Financiera</span>
+          <h1 class="slide-title">Presupuesto del Proyecto: Derivación Coherente del Gantt</h1>
+        </div>
+        <div class="presenter-badge">
+          <span class="presenter-dot"></span>
+          🎙️ Presenta: Daniel Alexander Cobo
+        </div>
+      </div>
+
+      <div class="slide-body">
+        <div class="col-left-wide">
+          <!-- Tabla de Presupuesto -->
+          <div class="card" style="padding:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <span class="badge badge-success">Estructura de Costos del Proyecto (4 Meses)</span>
+              <span style="font-size:0.75rem; color:var(--text-dim);">Moneda: COP</span>
+            </div>
+
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>Categoría</th>
+                  <th>Detalle & Recursos del Gantt</th>
+                  <th>Subtotal Est.</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong style="color:#fff;">1. Talento Humano</strong></td>
+                  <td>2 Desarrolladores Junior (Colorado & Cobo) × 4 meses (17 sem) en formulación, backend, frontend y pruebas.</td>
+                  <td><strong style="color:#38bdf8;">$16.000.000</strong><br><small style="color:var(--text-dim);">(Dedicación 20h/sem)</small></td>
+                </tr>
+                <tr>
+                  <td><strong style="color:#fff;">2. Infraestructura</strong></td>
+                  <td>2 Estaciones Linux Fedora + 1 Router/Gateway físico para laboratorio de pruebas de red (depreciación/uso).</td>
+                  <td><strong style="color:#e2e8f0;">$1.200.000</strong></td>
+                </tr>
+                <tr>
+                  <td><strong style="color:#fff;">3. Tecnología & Software</strong></td>
+                  <td>FastAPI, React 19, Nmap CLI, SQLite, Vite, Tailwind CSS, Pytest (Stack 100% Open Source).</td>
+                  <td><strong style="color:#34d399;">$0 COP</strong><br><small style="color:var(--text-dim);">(Ahorro Licencias)</small></td>
+                </tr>
+                <tr>
+                  <td><strong style="color:#fff;">4. Operaciones & Conectividad</strong></td>
+                  <td>Internet fibra óptica + consumo eléctrico para pruebas continuas de escaneo durante 4 meses.</td>
+                  <td><strong style="color:#e2e8f0;">$800.000</strong></td>
+                </tr>
+                <tr>
+                  <td><strong style="color:#fff;">5. Imprevistos / Contingencia</strong></td>
+                  <td>Fondo de reserva del 10% sobre costos directos para fluctuaciones técnicas o ajustes de hardware.</td>
+                  <td><strong style="color:#fbbf24;">$1.800.000</strong></td>
+                </tr>
+                <tr style="background:rgba(16, 185, 129, 0.1); font-weight:700;">
+                  <td style="color:#10B981;">TOTAL DEL PROYECTO</td>
+                  <td style="color:#a7f3d0;">Costo de producción / desarrollo integral</td>
+                  <td style="color:#10B981; font-size:1.05rem; font-family:var(--font-mono);">$19.800.000 COP</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Investigación Salarial -->
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div class="card" style="border-left:4px solid var(--secondary);">
+              <span class="kpi-label">Benchmarking Salarial Junior en Colombia</span>
+              <p style="font-size:0.83rem; color:#cbd5e1; margin-top:6px; line-height:1.4;">
+                Según reportes gremiales de <strong>Fedesoft / Cenisoft</strong>, consultoras como <strong>Michael Page</strong> y portales del sector:
+              </p>
+              <ul style="list-style:none; margin-top:8px; display:flex; flex-direction:column; gap:6px; font-size:0.8rem; color:#e2e8f0;">
+                <li>🔹 <strong>Salario Promedio Junior TI:</strong> $2.200.000 – $2.800.000 COP/mes.</li>
+                <li>🔹 <strong>Junior Especializado (Python/FastAPI/React):</strong> $2.500.000 COP/mes.</li>
+                <li>🔹 <strong>Valor Hora Freelance / Consultoría:</strong> $25.000 COP/hora.</li>
+              </ul>
+            </div>
+
+            <div class="card" style="border-left:4px solid var(--primary);">
+              <span class="kpi-label">¿Cuánto Deberíamos Cobrar?</span>
+              <p style="font-size:0.82rem; color:#cbd5e1; margin-top:6px; line-height:1.4;">
+                En un <strong>estado comercial ideal</strong> de venta de software llave en mano para clientes de BlackCircuit Paradigm S.A.S., sumando costos directos más un <strong>margen de utilidad del 25%</strong>:
+              </p>
+              <div style="margin-top:8px; font-size:1.15rem; font-weight:800; color:#34d399; font-family:var(--font-mono);">
+                $24.750.000 – $28.000.000 COP
+              </div>
+              <span style="font-size:0.72rem; color:var(--text-dim);">Garantiza retorno de inversión, cobertura de imprevistos y sostenibilidad operativa.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="speech-drawer">
+        <div class="speech-header">
+          <span>🎙️ Speech Sugerido (Daniel Alexander Cobo) · Duración estimada: 1 min</span>
+          <span style="font-family:var(--font-mono); font-size:0.75rem;">Tiempo acumulado: 6:00</span>
+        </div>
+        <p class="speech-text">
+          "El presupuesto de NetGuard se deriva directamente de las 17 semanas planificadas en el Gantt. Investigamos el mercado laboral de TI en Colombia a través de Fedesoft y Michael Page, donde un desarrollador junior con stack en Python y React percibe entre 2.2 y 2.8 millones de pesos mensuales. Para nuestro proyecto calculamos una dedicación técnica estimada que arroja 16 millones en talento humano para dos ingenieros durante 4 meses. En tecnología logramos costo cero de licencias adoptando software libre, y con los rubros de infraestructura, conectividad y un 10% de imprevistos, el costo total de desarrollo se sitúa en 19,8 millones de pesos; cifra que comercialmente equivaldría a unos 25 millones de pesos en una entrega llave en mano."
+        </p>
+      </div>
+    </section>
+
+    <!-- SLIDE 7 -->
+    <section class="slide" id="slide-7" data-index="7">
+      <div class="slide-header">
+        <div class="slide-title-wrap">
+          <span class="slide-subtitle">Diapositiva 7 · Coherencia Metodológica</span>
+          <h1 class="slide-title">Integración del Proyecto: Trazabilidad Extremo a Extremo</h1>
+        </div>
+        <div class="presenter-badge">
+          <span class="presenter-dot"></span>
+          🎙️ Presenta: Juan Esteban Colorado
+        </div>
+      </div>
+
+      <div class="slide-body">
+        <div style="display:flex; flex-direction:column; gap:20px; width:100%;">
+          <!-- Pipeline Visual -->
+          <div style="display:flex; gap:16px; align-items:stretch;">
+            <div class="pipe-step" style="border-top:4px solid #EF4444;">
+              <span style="font-size:1.4rem;">🔍</span>
+              <strong style="color:#fff; font-size:0.9rem; margin-top:6px;">1. Diagnóstico</strong>
+              <span style="font-size:0.75rem; color:#f87171; font-weight:700;">EL PORQUÉ</span>
+              <p style="font-size:0.76rem; color:#cbd5e1; margin-top:6px;">
+                Identifica la ceguera de red, datos dispersos en consola y delitos crecientes (73,9% hogares conectados).
+              </p>
+            </div>
+
+            <div class="pipe-step" style="border-top:4px solid #3B82F6;">
+              <span style="font-size:1.4rem;">🎯</span>
+              <strong style="color:#fff; font-size:0.9rem; margin-top:6px;">2. Objetivos SMART</strong>
+              <span style="font-size:0.75rem; color:#60a5fa; font-weight:700;">EL QUÉ</span>
+              <p style="font-size:0.76rem; color:#cbd5e1; margin-top:6px;">
+                Convierten las causas en metas: escaneo &lt;120s, lectura &lt;5s, detección 100% de equipos nuevos.
+              </p>
+            </div>
+
+            <div class="pipe-step" style="border-top:4px solid #10B981;">
+              <span style="font-size:1.4rem;">📊</span>
+              <strong style="color:#fff; font-size:0.9rem; margin-top:6px;">3. Indicadores</strong>
+              <span style="font-size:0.75rem; color:#34d399; font-weight:700;">EL CÓMO SE MIDE</span>
+              <p style="font-size:0.76rem; color:#cbd5e1; margin-top:6px;">
+                Gobiernan el avance: <strong>ICC</strong> (Cumplimiento de Cronograma), <strong>IEC</strong> (Eficacia Técnica) y <strong>IEP</strong> (Eficiencia Presupuestal).
+              </p>
+            </div>
+
+            <div class="pipe-step" style="border-top:4px solid #F59E0B;">
+              <span style="font-size:1.4rem;">📅</span>
+              <strong style="color:#fff; font-size:0.9rem; margin-top:6px;">4. Roadmap Scrum & Gantt</strong>
+              <span style="font-size:0.75rem; color:#fbbf24; font-weight:700;">CUÁNDO Y QUIÉN</span>
+              <p style="font-size:0.76rem; color:#cbd5e1; margin-top:6px;">
+                Organiza el Product Backlog (H01-H11) en Sprints iterativos con responsables claros (Cobo & Colorado).
+              </p>
+            </div>
+
+            <div class="pipe-step" style="border-top:4px solid #8B5CF6;">
+              <span style="font-size:1.4rem;">💰</span>
+              <strong style="color:#fff; font-size:0.9rem; margin-top:6px;">5. Presupuesto</strong>
+              <span style="font-size:0.75rem; color:#c084fc; font-weight:700;">CUÁNTO CUESTA</span>
+              <p style="font-size:0.76rem; color:#cbd5e1; margin-top:6px;">
+                Financia exactamente las actividades del Gantt con $19.8M COP sin desperdicio en licencias.
+              </p>
+            </div>
+          </div>
+
+          <!-- Recuadro de Integridad Metodológica -->
+          <div class="card primary-card" style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:center;">
+            <div>
+              <h4 style="color:#fff; font-size:1.05rem; margin-bottom:8px;">Principio de Trazabilidad e Interdependencia</h4>
+              <p style="font-size:0.85rem; color:#d1d5db; line-height:1.5;">
+                Demostramos que en NetGuard <strong>ninguna decisión está aislada</strong>: si un objetivo SMART cambia, se modifica la EDT del cronograma, se alteran los recursos requeridos y se desajusta el indicador presupuestal. Esta cadena garantiza solidez técnica ante la evaluación.
+              </p>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-light); border-radius:8px; padding:14px; font-size:0.82rem; color:#9ca3af;">
+              <div style="margin-bottom:6px;">✅ <strong>Objetivo sin Indicador</strong> = Mera aspiración no medible.</div>
+              <div style="margin-bottom:6px;">✅ <strong>Actividad sin Presupuesto</strong> = Tarea inviable por falta de recursos.</div>
+              <div>✅ <strong>Presupuesto sin Diagnóstico</strong> = Despilfarro no justificado.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="speech-drawer">
+        <div class="speech-header">
+          <span>🎙️ Speech Sugerido (Juan Esteban Colorado) · Duración estimada: 50 seg</span>
+          <span style="font-family:var(--font-mono); font-size:0.75rem;">Tiempo acumulado: 6:50</span>
+        </div>
+        <p class="speech-text">
+          "En esta diapositiva sintetizamos la coherencia general exigida en la rúbrica. NetGuard no es una suma accidental de partes. El diagnóstico demostró que las redes domésticas y pymes operan a ciegas; eso determinó nuestros objetivos SMART. A su vez, los objetivos se tradujeron en un Product Backlog de Scrum con 11 historias de usuario priorizadas en Sprints de trabajo. Esos Sprints se secuenciaron en el cronograma de 17 semanas, y ese plan sustentó un presupuesto de 19,8 millones de pesos. Si quitáramos cualquiera de estos eslabones, la propuesta perdería viabilidad técnica y académica. Es un ciclo de trazabilidad cerrado y consistente."
+        </p>
+      </div>
+    </section>
+
+    <!-- SLIDE 8 -->
+    <section class="slide" id="slide-8" data-index="8">
+      <div class="slide-header">
+        <div class="slide-title-wrap">
+          <span class="slide-subtitle">Diapositiva 8 · Reflexión y Conclusiones (5 Pts Rúbrica)</span>
+          <h1 class="slide-title">Conclusiones y Aprendizajes: De Programar a Formular Proyectos</h1>
+        </div>
+        <div class="presenter-badge">
+          <span class="presenter-dot"></span>
+          🎙️ Presentan: Daniel Cobo & Juan Colorado
+        </div>
+      </div>
+
+      <div class="slide-body">
+        <div class="col-2">
+          <!-- Conclusiones -->
+          <div class="card" style="display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <span class="badge badge-success" style="margin-bottom:12px;">Conclusiones del Proyecto</span>
+              <ul class="bullet-list" style="margin-top:10px;">
+                <li class="bullet-item">
+                  <span class="bullet-icon">✔️</span>
+                  <span><strong>Formulación Coherente:</strong> NetGuard responde de forma directa a la brecha de visibilidad y al aumento de delitos informáticos en Colombia, superando las limitaciones de la consola.</span>
+                </li>
+                <li class="bullet-item">
+                  <span class="bullet-icon">✔️</span>
+                  <span><strong>Instrumentos de Control:</strong> Los indicadores: <strong>ICC</strong> (Cumplimiento de Cronograma), <strong>IEC</strong> (Eficacia Técnica) y <strong>IEP</strong> (Eficiencia Presupuestal), junto al Gantt, son herramientas críticas para mitigar riesgos.</span>
+                </li>
+                <li class="bullet-item">
+                  <span class="bullet-icon">✔️</span>
+                  <span><strong>Factibilidad Técnica:</strong> La combinación de Python/FastAPI, Nmap y React 19 demostró viabilidad con tiempos de escaneo inferiores a 120s y 25 pruebas unitarias exitosas.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:8px; padding:12px; margin-top:16px;">
+              <small style="color:#93c5fd; font-weight:600; display:block; margin-bottom:4px;">Estado de Madurez:</small>
+              <span style="font-size:0.83rem; color:#e2e8f0;">Fases 1 a 4 concluidas; Fases 5 y 6 en ejecución activa con 100% de cumplimiento al corte.</span>
+            </div>
+          </div>
+
+          <!-- Aprendizajes del Equipo -->
+          <div class="card primary-card" style="display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <span class="badge badge-purple" style="margin-bottom:12px;">Aprendizajes Significativos</span>
+              
+              <div style="display:flex; flex-direction:column; gap:12px; margin-top:8px;">
+                <div style="background:rgba(255,255,255,0.02); border-left:3px solid #8B5CF6; padding:10px 12px; border-radius:0 6px 6px 0;">
+                  <strong style="color:#fff; font-size:0.88rem;">1. La formulación precede al código:</strong>
+                  <p style="font-size:0.8rem; color:#cbd5e1; margin-top:4px;">Escribir software sin un diagnóstico sustentado en datos conduce a retrabajos y sobrecostos presupuestales.</p>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.02); border-left:3px solid #3B82F6; padding:10px 12px; border-radius:0 6px 6px 0;">
+                  <strong style="color:#fff; font-size:0.88rem;">2. Enfoque Ágil en Scrum:</strong>
+                  <p style="font-size:0.8rem; color:#cbd5e1; margin-top:4px;">Gestionar el proyecto por Sprints con Historias de Usuario (H01-H11) y Story Points permitió entregables funcionales continuos y adaptación rápida al cambio.</p>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.02); border-left:3px solid #10B981; padding:10px 12px; border-radius:0 6px 6px 0;">
+                  <strong style="color:#fff; font-size:0.88rem;">3. Calidad integrada (DoD):</strong>
+                  <p style="font-size:0.8rem; color:#cbd5e1; margin-top:4px;">La norma ISO/IEC 25010 y las pruebas Pytest formaron parte de la Definición de Terminado en cada Sprint y no como un parche final.</p>
+                </div>
+              </div>
+            </div>
+
+            <div style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(59,130,246,0.15)); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:12px; margin-top:16px;">
+              <span style="font-size:0.75rem; color:#34d399; font-weight:700; text-transform:uppercase;">¿Qué aprendimos al formular NetGuard como proyecto?</span>
+              <p style="font-size:0.85rem; color:#fff; font-weight:600; font-style:italic; margin-top:4px; line-height:1.4;">
+                "Aprendimos que programar software es solo una destreza técnica; pero formular un proyecto de ingeniería es articular el problema real, los costos, los tiempos y la calidad para transformar datos de red en valor y seguridad para el usuario."
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="speech-drawer">
+        <div class="speech-header">
+          <span>🎙️ Speech Sugerido (Daniel Cobo & Juan Colorado) · Duración estimada: 1 min</span>
+          <span style="font-family:var(--font-mono); font-size:0.75rem;">Tiempo final: 7:10 (Margen: 50 seg)</span>
+        </div>
+        <p class="speech-text">
+          <strong>[Daniel Cobo]:</strong> "Para concluir, NetGuard demuestra que el rigor en los indicadores, el presupuesto y el cronograma no son trámites burocráticos, sino la garantía de entregar software útil dentro de los costos previstos."<br>
+          <strong>[Juan Colorado]:</strong> "Y como respuesta a qué aprendimos: aprendimos a dejar de ser solo desarrolladores de código para convertirnos en formuladores de proyectos de ingeniería, capaces de justificar cada decisión técnica frente a la sociedad y el mercado. Muchas gracias por su atención, quedamos atentos a sus preguntas."
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- OVERVIEW GRID MODAL -->
+  <div id="overviewModal" class="overview-modal">
+    <div style="display:flex; justify-content:space-between; align-items:center; max-width:1200px; margin:0 auto 20px;">
+      <h2 style="font-size:1.4rem; font-weight:800; color:#fff;">Índice General de Diapositivas (Presiona ESC o clic para cerrar)</h2>
+      <button class="btn" onclick="toggleOverview()">✕ Cerrar</button>
+    </div>
+    <div class="overview-grid" id="overviewGrid">
+      <!-- Injected via JS -->
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="deck-footer">
+    <div class="nav-btn-group">
+      <button class="btn" id="btnPrev" title="Anterior (Flecha Izq)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Anterior
+      </button>
+      <button class="btn btn-primary" id="btnNext" title="Siguiente (Espacio o Flecha Der)">
+        Siguiente
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <button class="btn" id="btnOverview" title="Ver cuadrícula (G)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Índice
+      </button>
+      <button class="btn" id="btnSpeechToggle" title="Ocultar/Mostrar Guion Oral (S)">
+        🗣️ Guion
+      </button>
+    </div>
+
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:16px;">
+      <span class="slide-counter" id="slideCounter">1 / 8</span>
+      <button class="btn" id="btnFullscreen" title="Pantalla Completa (F)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+    </div>
+  </footer>
+
+  <!-- SCRIPT -->
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    let currentSlide = 1;
+
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    const btnFullscreen = document.getElementById('btnFullscreen');
+    const btnOverview = document.getElementById('btnOverview');
+    const btnSpeechToggle = document.getElementById('btnSpeechToggle');
+    const slideCounter = document.getElementById('slideCounter');
+    const progressFill = document.getElementById('progressFill');
+    const overviewModal = document.getElementById('overviewModal');
+    const overviewGrid = document.getElementById('overviewGrid');
+
+    // Timer Variables
+    let timerSeconds = 0;
+    let timerRunning = true;
+    const timerText = document.getElementById('timerText');
+    const timerDisplay = document.getElementById('timerDisplay');
+
+    function updateTimer() {
+      if (timerRunning) {
+        timerSeconds++;
+        const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+        const secs = String(timerSeconds % 60).padStart(2, '0');
+        timerText.textContent = `${mins}:${secs}`;
+
+        if (timerSeconds >= 450) { // 7:30 min
+          timerDisplay.className = 'timer-badge danger';
+        } else if (timerSeconds >= 360) { // 6:00 min
+          timerDisplay.className = 'timer-badge warning';
+        } else {
+          timerDisplay.className = 'timer-badge';
+        }
+      }
+    }
+    setInterval(updateTimer, 1000);
+
+    timerDisplay.addEventListener('click', () => {
+      timerRunning = !timerRunning;
+      timerDisplay.style.opacity = timerRunning ? '1' : '0.5';
+    });
+
+    function showSlide(index) {
+      if (index < 1) index = 1;
+      if (index > totalSlides) index = totalSlides;
+
+      slides.forEach((s, idx) => {
+        s.classList.remove('active');
+        if (idx + 1 === index) {
+          s.classList.add('active');
+        }
+      });
+
+      currentSlide = index;
+      slideCounter.textContent = `${currentSlide} / ${totalSlides}`;
+      progressFill.style.width = `${(currentSlide / totalSlides) * 100}%`;
+
+      btnPrev.disabled = currentSlide === 1;
+      btnNext.disabled = currentSlide === totalSlides;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        showSlide(currentSlide + 1);
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        showSlide(currentSlide - 1);
+      }
+    }
+
+    btnNext.addEventListener('click', nextSlide);
+    btnPrev.addEventListener('click', prevSlide);
+
+    // Fullscreen
+    btnFullscreen.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    // Toggle Speech Drawers
+    let speechVisible = true;
+    btnSpeechToggle.addEventListener('click', () => {
+      speechVisible = !speechVisible;
+      document.querySelectorAll('.speech-drawer').forEach(d => {
+        d.style.display = speechVisible ? 'flex' : 'none';
+      });
+      btnSpeechToggle.style.color = speechVisible ? '#fff' : '#64748b';
+    });
+
+    // Overview modal
+    function buildOverview() {
+      overviewGrid.innerHTML = '';
+      slides.forEach((s, i) => {
+        const title = s.querySelector('.slide-title').textContent;
+        const subtitle = s.querySelector('.slide-subtitle').textContent;
+        const presenter = s.querySelector('.presenter-badge').textContent.trim();
+
+        const card = document.createElement('div');
+        card.className = `overview-thumb ${i + 1 === currentSlide ? 'current' : ''}`;
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.7rem; color:#10B981; font-weight:700;">#${i + 1}</span>
+            <span style="font-size:0.7rem; color:#93c5fd;">${presenter.replace('🎙️ Presenta: ', '')}</span>
+          </div>
+          <strong style="font-size:0.85rem; color:#fff; line-height:1.2;">${title}</strong>
+          <span style="font-size:0.72rem; color:#9ca3af;">${subtitle}</span>
+        `;
+        card.addEventListener('click', () => {
+          showSlide(i + 1);
+          toggleOverview();
+        });
+        overviewGrid.appendChild(card);
+      });
+    }
+
+    function toggleOverview() {
+      const isVisible = overviewModal.style.display === 'block';
+      if (!isVisible) {
+        buildOverview();
+        overviewModal.style.display = 'block';
+      } else {
+        overviewModal.style.display = 'none';
+      }
+    }
+
+    btnOverview.addEventListener('click', toggleOverview);
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (overviewModal.style.display === 'block') {
+        if (e.key === 'Escape') toggleOverview();
+        return;
+      }
+
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'f' || e.key === 'F') {
+        btnFullscreen.click();
+      } else if (e.key === 'g' || e.key === 'G') {
+        toggleOverview();
+      } else if (e.key === 's' || e.key === 'S') {
+        btnSpeechToggle.click();
+      }
+    });
+
+    // Initialize
+    showSlide(1);
+  </script>
+</body>
+</html>

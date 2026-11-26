@@ -11,6 +11,8 @@
 3. **[03_BASE_DE_DATOS.md](file:///home/danidoog/proyectos/netguard/contex/03_BASE_DE_DATOS.md)**: Modelos SQLAlchemy (`ScanRecord`, `HostRecord`, `DeviceRecord`), ciclo de vida de dispositivos y persistencia SQLite.
 4. **[04_FRONTEND_Y_UI.md](file:///home/danidoog/proyectos/netguard/contex/04_FRONTEND_Y_UI.md)**: React 19, TypeScript, Vite, Tailwind CSS v4, Recharts, vistas (Dashboard, Devices, History, Analytics, Help), caché y hooks.
 5. **[05_GUIA_EJECUCION_Y_COMANDOS.md](file:///home/danidoog/proyectos/netguard/contex/05_GUIA_EJECUCION_Y_COMANDOS.md)**: Cómo iniciar backend y frontend, ejecutar tests, scripts de prueba manual y troubleshooting.
+6. **[PLAN_DE_PRUEBAS_NETGUARD.md](file:///home/danidoog/proyectos/netguard/contex/PLAN_DE_PRUEBAS_NETGUARD.md)**: Plan de pruebas formal estructurado bajo el formato Light, cubriendo las historias de usuario clave, calidad ISO/IEC 25010 y matriz de riesgos.
+7. **[CASOS_DE_PRUEBA_NETGUARD.md](file:///home/danidoog/proyectos/netguard/contex/CASOS_DE_PRUEBA_NETGUARD.md)** / **[CasosDePrueba_NetGuard.xlsx](file:///home/danidoog/proyectos/netguard/contex/CasosDePrueba_NetGuard.xlsx)**: Suite de pruebas detallada en Excel y Markdown basada en la plantilla `TestCaseTemplate.xlsx`, con 8 historias de usuario y 26 casos de prueba ejecutados.
 
 ---
 

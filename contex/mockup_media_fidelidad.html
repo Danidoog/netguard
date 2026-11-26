@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard - Mockup Interactivo de Media Fidelidad</title>
+  <style>
+    /* ==========================================================================
+       NETGUARD - PROTOTIPO / MOCKUP DE MEDIA FIDELIDAD (MID-FIDELITY WIREFRAME)
+       100% HTML5 & CSS3 PURO - CERO JAVASCRIPT / CERO DEPENDENCIAS EXTERNAS
+       ========================================================================== */
+
+    :root {
+      /* Paleta Wireframe / Media Fidelidad (Escala Slate / Gris Técnico) */
+      --wf-bg: #f8fafc;
+      --wf-canvas: #f1f5f9;
+      --wf-surface: #ffffff;
+      --wf-surface-subtle: #f8fafc;
+      --wf-border: #cbd5e1;
+      --wf-border-strong: #94a3b8;
+      --wf-border-focus: #475569;
+      
+      --wf-text-main: #0f172a;
+      --wf-text-muted: #475569;
+      --wf-text-dim: #94a3b8;
+      
+      /* Acentos sutiles para estados y heurísticas */
+      --wf-accent: #2563eb;
+      --wf-accent-light: #eff6ff;
+      --wf-success: #16a34a;
+      --wf-success-light: #f0fdf4;
+      --wf-warning: #d97706;
+      --wf-warning-light: #fffbeb;
+      --wf-danger: #dc2626;
+      --wf-danger-light: #fef2f2;
+      --wf-note: #e0e7ff;
+      --wf-note-border: #818cf8;
+
+      /* Tipografía y Espaciado */
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-full: 9999px;
+      
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-modal: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--wf-canvas);
+      color: var(--wf-text-main);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 40px;
+    }
+
+    /* Ocultar inputs de control de estado */
+    input.state-radio,
+    input.state-checkbox {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      width: 0;
+      height: 0;
+    }
+
+    /* --------------------------------------------------------------------------
+       BARRA SUPERIOR DE METADATOS DEL MOCKUP (DOCUMENTACIÓN / ARCHIVO)
+       -------------------------------------------------------------------------- */
+    .mockup-toolbar {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 10px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+      border-bottom: 2px solid #334155;
+    }
+
+    .mockup-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .badge-mid-fi {
+      background: #334155;
+      color: #38bdf8;
+      border: 1px solid #475569;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .toolbar-info {
+      color: #94a3b8;
+    }
+
+    .toolbar-info strong {
+      color: #e2e8f0;
+    }
+
+    .mockup-toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .toggle-annotations-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      background: #1e293b;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #475569;
+      color: #e2e8f0;
+      transition: all 0.15s ease;
+    }
+
+    .toggle-annotations-btn:hover {
+      background: #334155;
+    }
+
+    .indicator-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--wf-success);
+    }
+
+    /* --------------------------------------------------------------------------
+       CONTENEDOR PRINCIPAL DE LA APLICACIÓN (FRAME DEL SISTEMA)
+       -------------------------------------------------------------------------- */
+    .app-frame {
+      max-width: 1400px;
+      margin: 20px auto;
+      background: var(--wf-surface);
+      border: 1px solid var(--wf-border-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 820px;
+    }
+
+    @media (max-width: 900px) {
+      .app-frame {
+        grid-template-columns: 1fr;
+        margin: 0;
+        border-radius: 0;
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       SIDEBAR / BARRA LATERAL DE NAVEGACIÓN
+       -------------------------------------------------------------------------- */
+    aside.app-sidebar {
+      background: #ffffff;
+      border-right: 1px solid var(--wf-border);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px 16px;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--wf-border);
+      margin-bottom: 20px;
+    }
+
+    .brand-logo-wf {
+      width: 36px;
+      height: 36px;
+      background: #0f172a;
+      color: #ffffff;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-titles h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--wf-text-main);
+      line-height: 1.2;
+    }
+
+    .brand-titles p {
+      font-size: 11px;
+      color: var(--wf-text-muted);
+    }
+
+    nav.sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-grow: 1;
+    }
+
+    .nav-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      color: var(--wf-text-muted);
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s, color 0.15s;
+      border: 1px solid transparent;
+    }
+
+    .nav-label:hover {
+      background: var(--wf-canvas);
+      color: var(--wf-text-main);
+    }
+
+    .nav-icon {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2;
+      stroke: currentColor;
+      fill: none;
+    }
+
+    .sidebar-footer {
+      padding-top: 20px;
+      border-top: 1px solid var(--wf-border);
+      font-size: 11px;
+      color: var(--wf-text-muted);
+    }
+
+    .net-badge {
+      background: var(--wf-canvas);
+      border: 1px solid var(--wf-border);
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      margin-top: 8px;
+      font-family: var(--font-mono);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* --------------------------------------------------------------------------
+       CONTENIDO PRINCIPAL Y VISTAS
+       -------------------------------------------------------------------------- */
+    main.app-main {
+      background: var(--wf-bg);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      position: relative;
+    }
+
+    /* Header interno de la App */
+    header.app-header {
+      background: var(--wf-surface);
+      border-bottom: 1px solid var(--wf-border);
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--wf-text-muted);
+    }
+
+    .header-breadcrumb strong {
+      color: var(--wf-text-main);
+    }
+
+    .header-status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--wf-canvas);
+      border: 1px solid var(--wf-border);
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      color: var(--wf-text-muted);
+    }
+
+    /* Contenedor de Vistas */
+    .views-wrapper {
+      padding: 28px;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+
+    /* Ocultar todas las vistas por defecto */
+    .view-container {
+      display: none;
+      animation: fadeIn 0.15s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(2px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Control de Vistas con Radio Buttons */
+    #tab-dashboard:checked ~ .app-frame nav .nav-dashboard {
+      background: var(--wf-canvas);
+      color: var(--wf-text-main);
+      font-weight: 600;
+      border-color: var(--wf-border);
+    }
+    #tab-dashboard:checked ~ .app-frame .view-dashboard { display: block; }
+
+    #tab-devices:checked ~ .app-frame nav .nav-devices {
+      background: var(--wf-canvas);
+      color: var(--wf-text-main);
+      font-weight: 600;
+      border-color: var(--wf-border);
+    }
+    #tab-devices:checked ~ .app-frame .view-devices { display: block; }
+
+    #tab-history:checked ~ .app-frame nav .nav-history {
+      background: var(--wf-canvas);
+      color: var(--wf-text-main);
+      font-weight: 600;
+      border-color: var(--wf-border);
+    }
+    #tab-history:checked ~ .app-frame .view-history { display: block; }
+
+    #tab-analytics:checked ~ .app-frame nav .nav-analytics {
+      background: var(--wf-canvas);
+      color: var(--wf-text-main);
+      font-weight: 600;
+      border-color: var(--wf-border);
+    }
+    #tab-analytics:checked ~ .app-frame .view-analytics { display: block; }
+
+    #tab-settings:checked ~ .app-frame nav .nav-settings {
+      background: var(--wf-canvas);
+      color: var(--wf-text-main);
+      font-weight: 600;
+      border-color: var(--wf-border);
+    }
+    #tab-settings:checked ~ .app-frame .view-settings { display: block; }
+
+    /* --------------------------------------------------------------------------
+       COMPONENTES WIREFRAME (CARDS, STATS, BOTONES, TABLAS)
+       -------------------------------------------------------------------------- */
+    .view-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .view-title-row h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--wf-text-main);
+    }
+
+    .view-title-row p {
+      font-size: 13px;
+      color: var(--wf-text-muted);
+      margin-top: 2px;
+    }
+
+    /* Botones Wireframe */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--wf-border-strong);
+      background: var(--wf-surface);
+      color: var(--wf-text-main);
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s, border-color 0.15s;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background: var(--wf-canvas);
+      border-color: var(--wf-border-focus);
+    }
+
+    .btn-primary {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+    }
+
+    .btn-primary:hover {
+      background: #1e293b;
+      border-color: #1e293b;
+    }
+
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Grid de Estadísticas (StatCards) */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--wf-surface);
+      border: 1px solid var(--wf-border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      position: relative;
+    }
+
+    .stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .stat-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--wf-text-muted);
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--wf-text-main);
+      line-height: 1.1;
+      font-family: var(--font-mono);
+    }
+
+    .stat-subtext {
+      font-size: 11px;
+      color: var(--wf-text-dim);
+      margin-top: 6px;
+    }
+
+    /* Barra de Salud de Red */
+    .health-section {
+      background: var(--wf-surface);
+      border: 1px solid var(--wf-border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .health-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .health-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--wf-success-light);
+      color: var(--wf-success);
+      border: 1px solid #bbf7d0;
+    }
+
+    .health-progress-bar {
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      display: flex;
+      margin-bottom: 8px;
+    }
+
+    .health-segment-trusted {
+      width: 75%;
+      background: #16a34a;
+    }
+
+    .health-segment-unverified {
+      width: 25%;
+      background: #d97706;
+    }
+
+    .health-legend {
+      display: flex;
+      gap: 20px;
+      font-size: 12px;
+      color: var(--wf-text-muted);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-bullet {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Alerta Banner */
+    .alert-banner {
+      background: var(--wf-warning-light);
+      border: 1px solid #fde68a;
+      border-left: 4px solid var(--wf-warning);
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .alert-banner strong {
+      color: #92400e;
+    }
+
+    /* Review Card (Acción Rápida de Clasificación) */
+    .review-card {
+      background: #fefce8;
+      border: 1px dashed #ca8a04;
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .review-info h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #713f12;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .review-meta {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #854d0e;
+      margin-top: 4px;
+    }
+
+    .review-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Tablas Wireframe */
+    .table-container {
+      background: var(--wf-surface);
+      border: 1px solid var(--wf-border);
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+    }
+
+    table.wf-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    table.wf-table th {
+      background: var(--wf-surface-subtle);
+      border-bottom: 1px solid var(--wf-border-strong);
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--wf-text-muted);
+    }
+
+    table.wf-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--wf-border);
+      color: var(--wf-text-main);
+      vertical-align: middle;
+    }
+
+    table.wf-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.wf-table tr:hover td {
+      background: #f8fafc;
+    }
+
+    .mono-cell {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--wf-text-muted);
+    }
+
+    /* Badges / Etiquetas */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .badge-success {
+      background: var(--wf-success-light);
+      color: var(--wf-success);
+      border-color: #bbf7d0;
+    }
+
+    .badge-warning {
+      background: var(--wf-warning-light);
+      color: var(--wf-warning);
+      border-color: #fde68a;
+    }
+
+    .badge-muted {
+      background: #f1f5f9;
+      color: #64748b;
+      border-color: #cbd5e1;
+    }
+
+    .badge-danger {
+      background: var(--wf-danger-light);
+      color: var(--wf-danger);
+      border-color: #fecaca;
+    }
+
+    .port-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 2px 6px;
+      background: #e2e8f0;
+      color: #334155;
+      border-radius: var(--radius-sm);
+      display: inline-block;
+      margin-right: 4px;
+    }
+
+    .port-pill-risk {
+      background: #fee2e2;
+      color: #991b1b;
+      font-weight: 700;
+      border: 1px solid #f87171;
+    }
+
+    /* Filtros tipo píldora para Dispositivos */
+    .filters-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .filter-pills {
+      display: flex;
+      gap: 6px;
+    }
+
+    .filter-pill-label {
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      background: var(--wf-surface);
+      border: 1px solid var(--wf-border);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--wf-text-muted);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s;
+    }
+
+    .filter-pill-label:hover {
+      background: var(--wf-canvas);
+    }
+
+    /* Radio filters interactivity */
+    #filter-all:checked ~ .app-frame .pill-all,
+    #filter-online:checked ~ .app-frame .pill-online,
+    #filter-trusted:checked ~ .app-frame .pill-trusted,
+    #filter-unverified:checked ~ .app-frame .pill-unverified {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+      font-weight: 600;
+    }
+
+    /* Filtrado visual de filas por estado */
+    #filter-online:checked ~ .app-frame tr.device-offline { display: none; }
+    #filter-trusted:checked ~ .app-frame tr.device-untrusted { display: none; }
+    #filter-unverified:checked ~ .app-frame tr.device-trusted { display: none; }
+
+    /* Buscador Mock */
+    .search-mock-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--wf-surface);
+      border: 1px solid var(--wf-border);
+      padding: 6px 12px;
+      border-radius: var(--radius-md);
+      width: 280px;
+    }
+
+    .search-mock-box input {
+      border: none;
+      outline: none;
+      font-size: 12px;
+      width: 100%;
+      background: transparent;
+      color: var(--wf-text-main);
+    }
+
+    /* --------------------------------------------------------------------------
+       VISTA HISTORIAL - COLLAPSIBLE DAYS
+       -------------------------------------------------------------------------- */
+    details.history-day {
+      background: var(--wf-surface);
+      border: 1px solid var(--wf-border);
+      border-radius: var(--radius-md);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    details.history-day summary {
+      padding: 14px 18px;
+      background: var(--wf-surface-subtle);
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      list-style: none;
+      border-bottom: 1px solid transparent;
+    }
+
+    details.history-day[open] summary {
+      border-bottom-color: var(--wf-border);
+    }
+
+    details.history-day summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .history-items-list {
+      padding: 12px 18px;
+    }
+
+    .history-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px dashed var(--wf-border);
+      font-size: 13px;
+    }
+
+    .history-entry:last-child {
+      border-bottom: none;
+    }
+
+    /* --------------------------------------------------------------------------
+       VISTA CONFIGURACIÓN (SCHEDULER / TAREAS)
+       -------------------------------------------------------------------------- */
+    .config-card {
+      background: var(--wf-surface);
+      border: 1px solid var(--wf-border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin-bottom: 20px;
+      max-width: 800px;
+    }
+
+    .config-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--wf-border);
+      gap: 16px;
+    }
+
+    .config-row:last-child {
+      border-bottom: none;
+    }
+
+    .config-text h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--wf-text-main);
+    }
+
+    .config-text p {
+      font-size: 12px;
+      color: var(--wf-text-muted);
+      margin-top: 2px;
+    }
+
+    /* Switch Interactivo CSS Puro */
+    .switch-label {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      cursor: pointer;
+    }
+
+    .switch-label input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #cbd5e1;
+      transition: .2s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    .switch-label input:checked + .slider {
+      background-color: #0f172a;
+    }
+
+    .switch-label input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    /* --------------------------------------------------------------------------
+       VISTA ANALÍTICAS (MOCKUP GRÁFICO SVG)
+       -------------------------------------------------------------------------- */
+    .chart-container {
+      background: var(--wf-surface);
+      border: 1px solid var(--wf-border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .chart-header {
+      margin-bottom: 16px;
+    }
+
+    .chart-header h3 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .chart-header p {
+      font-size: 12px;
+      color: var(--wf-text-muted);
+    }
+
+    /* --------------------------------------------------------------------------
+       MODAL DE DETALLE DE DISPOSITIVO (CSS PURO CON :TARGET O CHECKBOX)
+       -------------------------------------------------------------------------- */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(2px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .modal-backdrop-dismiss {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+
+    /* Abrir modal cuando el checkbox #device-modal-toggle está marcado o por :target */
+    #device-modal-toggle:checked ~ .modal-overlay,
+    #modal-device-view:target {
+      display: flex;
+    }
+
+    .modal-content {
+      position: relative;
+      z-index: 2;
+      background: var(--wf-surface);
+      border: 1px solid var(--wf-border-strong);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 650px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-modal);
+      animation: modalScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalScale {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--wf-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--wf-surface-subtle);
+    }
+
+    .modal-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--wf-text-muted);
+      padding: 4px;
+      line-height: 1;
+      text-decoration: none;
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .detail-item {
+      background: var(--wf-canvas);
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--wf-border);
+    }
+
+    .detail-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--wf-text-dim);
+    }
+
+    .detail-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--wf-text-main);
+      margin-top: 4px;
+    }
+
+    .detail-value-mono {
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .modal-form-group {
+      margin-bottom: 16px;
+    }
+
+    .modal-form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--wf-text-muted);
+      margin-bottom: 6px;
+    }
+
+    .modal-form-group input[type="text"] {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--wf-border-strong);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--wf-border);
+      background: var(--wf-surface-subtle);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* --------------------------------------------------------------------------
+       ANOTACIONES DE ARQUITECTURA / UX (CALLOUTS ACADÉMICOS PARA DOCUMENTO)
+       -------------------------------------------------------------------------- */
+    .ux-annotation {
+      background: var(--wf-note);
+      border: 1px dashed var(--wf-note-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #3730a3;
+      margin: 12px 0 16px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.4;
+    }
+
+    .ux-tag {
+      background: #4f46e5;
+      color: #ffffff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      margin-top: 1px;
+    }
+
+    /* Ocultar anotaciones si se desmarca el checkbox general */
+    #toggle-annotations:not(:checked) ~ .app-frame .ux-annotation {
+      display: none !important;
+    }
+
+    #toggle-annotations:checked ~ .mockup-toolbar .toggle-annotations-btn {
+      background: #1e293b;
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+
+    #toggle-annotations:not(:checked) ~ .mockup-toolbar .toggle-annotations-btn {
+      opacity: 0.6;
+      border-style: dashed;
+    }
+
+    /* Banner informativo al pie */
+    .academic-footer-info {
+      max-width: 1400px;
+      margin: 20px auto 0 auto;
+      background: #ffffff;
+      border: 1px solid var(--wf-border);
+      border-radius: var(--radius-md);
+      padding: 16px 24px;
+      font-size: 12px;
+      color: var(--wf-text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================
+       ESTADOS INTERACTIVOS EN CSS PURO (ZERO JAVASCRIPT)
+       ======================================================================== -->
+  <input type="radio" name="main-nav" id="tab-dashboard" class="state-radio" checked>
+  <input type="radio" name="main-nav" id="tab-devices" class="state-radio">
+  <input type="radio" name="main-nav" id="tab-history" class="state-radio">
+  <input type="radio" name="main-nav" id="tab-analytics" class="state-radio">
+  <input type="radio" name="main-nav" id="tab-settings" class="state-radio">
+
+  <!-- Filtros en la vista de Dispositivos -->
+  <input type="radio" name="device-filter" id="filter-all" class="state-radio" checked>
+  <input type="radio" name="device-filter" id="filter-online" class="state-radio">
+  <input type="radio" name="device-filter" id="filter-trusted" class="state-radio">
+  <input type="radio" name="device-filter" id="filter-unverified" class="state-radio">
+
+  <!-- Control de Modal de Detalle de Dispositivo -->
+  <input type="checkbox" id="device-modal-toggle" class="state-checkbox">
+
+  <!-- Interruptor de Anotaciones UX / Académicas -->
+  <input type="checkbox" id="toggle-annotations" class="state-checkbox" checked>
+
+  <!-- ========================================================================
+       BARRA SUPERIOR DE METADATOS DEL PROTOTIPO
+       ======================================================================== -->
+  <div class="mockup-toolbar">
+    <div class="mockup-toolbar-left">
+      <span class="badge-mid-fi">Mockup Media Fidelidad</span>
+      <span class="toolbar-info">Proyecto: <strong>NetGuard (D. Cobo &amp; J. Colorado)</strong></span>
+      <span class="toolbar-info">Stack: <strong>FastAPI + SQLite + Nmap + React / Vite</strong></span>
+    </div>
+    <div class="mockup-toolbar-right">
+      <span class="toolbar-info"><span class="indicator-dot"></span> Interactivo sin código (CSS Puro)</span>
+      <label for="toggle-annotations" class="toggle-annotations-btn" title="Alternar visibilidad de notas de arquitectura UX">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        <span>Anotaciones UX</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       FRAME PRINCIPAL DE LA APLICACIÓN NETGUARD
+       ======================================================================== -->
+  <div class="app-frame">
+
+    <!-- BARRA LATERAL (SIDEBAR) -->
+    <aside class="app-sidebar">
+      <div>
+        <div class="brand-section">
+          <div class="brand-logo-wf">NG</div>
+          <div class="brand-titles">
+            <h1>NetGuard</h1>
+            <p>Auditoría de Red Hogar</p>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav">
+          <label for="tab-dashboard" class="nav-label nav-dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <span>Dashboard</span>
+          </label>
+          <label for="tab-devices" class="nav-label nav-devices">
+            <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            <span>Dispositivos</span>
+          </label>
+          <label for="tab-history" class="nav-label nav-history">
+            <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span>Historial</span>
+          </label>
+          <label for="tab-analytics" class="nav-label nav-analytics">
+            <svg class="nav-icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            <span>Analíticas</span>
+          </label>
+          <label for="tab-settings" class="nav-label nav-settings">
+            <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span>Configuración</span>
+          </label>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <div>Red actual monitoreada:</div>
+        <div class="net-badge">
+          <span>192.168.1.0/24</span>
+          <span style="color: var(--wf-success);">● ACTIVA</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ÁREA DE CONTENIDO -->
+    <main class="app-main">
+      <header class="app-header">
+        <div class="header-breadcrumb">
+          <span>NetGuard</span>
+          <span>/</span>
+          <strong>Panel de Control Doméstico</strong>
+        </div>
+        <div class="header-status-pill">
+          <span class="indicator-dot"></span>
+          <span>Backend Online · FastAPI + Nmap 7.94</span>
+        </div>
+      </header>
+
+      <div class="views-wrapper">
+
+        <!-- ==================================================================
+             VISTA 1: DASHBOARD
+             ================================================================== -->
+        <section class="view-container view-dashboard">
+          
+          <div class="ux-annotation">
+            <span class="ux-tag">Arquitectura UX</span>
+            <div><strong>Vista Principal (Dashboard):</strong> Prioriza el descubrimiento inmediato y la heurística de confianza. El usuario no técnico visualiza en menos de 3 segundos la salud de su red, los dispositivos conectados y alertas de equipos sospechosos.</div>
+          </div>
+
+          <div class="view-title-row">
+            <div>
+              <h2>Dashboard de Red</h2>
+              <p>Monitoreo en tiempo real del segmento 192.168.1.0/24</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <span class="mono-cell" style="font-size: 11px;">Último escaneo: hoy 09:15 AM (12.4s)</span>
+              <button class="btn btn-primary" type="button" title="Acción asíncrona hacia /api/scans">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span>Iniciar Escaneo</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Métricas en Grid -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Dispositivos Totales</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              </div>
+              <div class="stat-value">6</div>
+              <div class="stat-subtext">Inventario persistente (SQLite)</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Conectados Ahora</span>
+                <span class="badge badge-success">5 online</span>
+              </div>
+              <div class="stat-value">5</div>
+              <div class="stat-subtext">1 equipo ausente (offline)</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">De Confianza</span>
+                <span class="badge badge-muted">Trusted</span>
+              </div>
+              <div class="stat-value">4</div>
+              <div class="stat-subtext">Dispositivos del hogar validados</div>
+            </div>
+
+            <div class="stat-card" style="border-color: #fde68a;">
+              <div class="stat-header">
+                <span class="stat-title" style="color: #b45309;">En Revisión</span>
+                <span class="badge badge-warning">Atención</span>
+              </div>
+              <div class="stat-value" style="color: #b45309;">2</div>
+              <div class="stat-subtext">1 nuevo sin clasificar + 1 riesgo</div>
+            </div>
+          </div>
+
+          <!-- Banner Alerta de Red -->
+          <div class="alert-banner">
+            <div>
+              <strong>⚠️ Alerta de Seguridad Doméstica:</strong> Se detectó 1 nuevo dispositivo desconocido (<span class="mono-cell">9C:B6:54:19:33:EE</span>) con puertos sensibles abiertos (Telnet puerto 23).
+            </div>
+            <label for="device-modal-toggle" class="btn btn-sm btn-primary" style="cursor: pointer;">
+              Revisar Ahora
+            </label>
+          </div>
+
+          <!-- Salud de la Red -->
+          <div class="health-section">
+            <div class="health-header">
+              <div>
+                <h3 style="font-size: 15px; font-weight: 600;">Salud de la Red (Heurística ISO/IEC 25010)</h3>
+                <p style="font-size: 12px; color: var(--wf-text-muted);">Porcentaje de dispositivos confiables frente a dispositivos sin verificar o de alto riesgo</p>
+              </div>
+              <div class="health-badge">
+                <span>● 83% Buena</span>
+              </div>
+            </div>
+            <div class="health-progress-bar">
+              <div class="health-segment-trusted" title="75% Confiables"></div>
+              <div class="health-segment-unverified" title="25% Sin Verificar"></div>
+            </div>
+            <div class="health-legend">
+              <div class="legend-item">
+                <div class="legend-bullet" style="background: #16a34a;"></div>
+                <span>4 Confiables (67%)</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-bullet" style="background: #d97706;"></div>
+                <span>2 En Revisión / Nuevos (33%)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Review Card para Clasificación Rápida -->
+          <div class="review-card">
+            <div class="review-info">
+              <h4>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                Dispositivo nuevo detectado: Requiere Clasificación
+              </h4>
+              <div class="review-meta">
+                IP: 192.168.1.199 | MAC: 9C:B6:54:19:33:EE | Fabricante: Desconocido (OUI no asignado)
+              </div>
+            </div>
+            <div class="review-actions">
+              <label for="device-modal-toggle" class="btn btn-sm" style="cursor: pointer;">Ver Análisis Técnico</label>
+              <button class="btn btn-sm btn-primary" type="button">Marcar de Confianza</button>
+            </div>
+          </div>
+
+          <!-- Tabla de Últimos Hosts Detectados -->
+          <div style="margin-top: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h3 style="font-size: 15px; font-weight: 600;">Hosts Detectados en Último Escaneo</h3>
+              <label for="tab-devices" class="btn btn-sm" style="cursor: pointer;">Ver inventario completo →</label>
+            </div>
+
+            <div class="table-container">
+              <table class="wf-table">
+                <thead>
+                  <tr>
+                    <th>Dispositivo / Alias</th>
+                    <th>IP / MAC</th>
+                    <th>Fabricante</th>
+                    <th>Tipo</th>
+                    <th>Puertos Detectados</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Router Principal</strong> (Gateway)</td>
+                    <td class="mono-cell">192.168.1.1<br><span style="font-size: 11px;">E4:C3:2A:89:12:01</span></td>
+                    <td>Sagemcom Broadband</td>
+                    <td><span class="badge badge-muted">Router</span></td>
+                    <td><span class="port-pill">80/http</span> <span class="port-pill">443/https</span> <span class="port-pill">53/dns</span></td>
+                    <td><span class="badge badge-success">● Confiable</span></td>
+                    <td><label for="device-modal-toggle" class="btn btn-sm" style="cursor: pointer;">Detalle</label></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Laptop Daniel</strong></td>
+                    <td class="mono-cell">192.168.1.15<br><span style="font-size: 11px;">3C:22:FB:45:90:AB</span></td>
+                    <td>Intel Corporate</td>
+                    <td><span class="badge badge-muted">PC / Laptop</span></td>
+                    <td><span class="port-pill">22/ssh</span> <span class="port-pill">8080/http</span></td>
+                    <td><span class="badge badge-success">● Confiable</span></td>
+                    <td><label for="device-modal-toggle" class="btn btn-sm" style="cursor: pointer;">Detalle</label></td>
+                  </tr>
+                  <tr style="background: #fffbeb;">
+                    <td><strong>Desconocido-199</strong> <span class="badge badge-warning">NUEVO</span></td>
+                    <td class="mono-cell">192.168.1.199<br><span style="font-size: 11px;">9C:B6:54:19:33:EE</span></td>
+                    <td>Desconocido</td>
+                    <td><span class="badge badge-warning">Sin identificar</span></td>
+                    <td><span class="port-pill-risk">23/telnet</span> <span class="port-pill">80/http</span></td>
+                    <td><span class="badge badge-warning">⚠️ Sin verificar</span></td>
+                    <td><label for="device-modal-toggle" class="btn btn-sm btn-primary" style="cursor: pointer;">Inspeccionar</label></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ==================================================================
+             VISTA 2: INVENTARIO DE DISPOSITIVOS
+             ================================================================== -->
+        <section class="view-container view-devices">
+          
+          <div class="ux-annotation">
+            <span class="ux-tag">Persistencia &amp; Control</span>
+            <div><strong>Inventario Persistente (`devices` en SQLite):</strong> A diferencia de la foto instantánea de un escaneo puntual, este catálogo persiste entre ejecuciones identificando los equipos de forma unívoca por su dirección MAC. Permite filtrar por estado y personalizar alias.</div>
+          </div>
+
+          <div class="view-title-row">
+            <div>
+              <h2>Inventario General de Dispositivos</h2>
+              <p>Listado histórico de equipos reconocidos en la red local</p>
+            </div>
+            <div class="search-mock-box">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" placeholder="Buscar por IP, MAC, alias o fabricante...">
+            </div>
+          </div>
+
+          <!-- Filtros de Estado -->
+          <div class="filters-bar">
+            <div class="filter-pills">
+              <label for="filter-all" class="filter-pill-label pill-all">Todos (6)</label>
+              <label for="filter-online" class="filter-pill-label pill-online">Conectados (5)</label>
+              <label for="filter-trusted" class="filter-pill-label pill-trusted">Confiables (4)</label>
+              <label for="filter-unverified" class="filter-pill-label pill-unverified">Sin Verificar (2)</label>
+            </div>
+            <div style="font-size: 12px; color: var(--wf-text-muted);">
+              Mostrando 6 dispositivos registrados
+            </div>
+          </div>
+
+          <!-- Tabla Completa de Inventario -->
+          <div class="table-container">
+            <table class="wf-table">
+              <thead>
+                <tr>
+                  <th>Dispositivo / Alias</th>
+                  <th>Hostname</th>
+                  <th>IP / MAC</th>
+                  <th>Fabricante</th>
+                  <th>Tipo</th>
+                  <th>Presencia</th>
+                  <th>Confianza</th>
+                  <th style="text-align: right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="device-online device-trusted">
+                  <td><strong>Router Principal</strong></td>
+                  <td class="mono-cell">gateway.home</td>
+                  <td class="mono-cell">192.168.1.1<br><span style="font-size: 11px;">E4:C3:2A:89:12:01</span></td>
+                  <td>Sagemcom Broadband</td>
+                  <td>Router</td>
+                  <td><span class="badge badge-success">Presente</span></td>
+                  <td><span class="badge badge-success">Confiable</span></td>
+                  <td style="text-align: right;"><label for="device-modal-toggle" class="btn btn-sm" style="cursor: pointer;">Editar</label></td>
+                </tr>
+                <tr class="device-online device-trusted">
+                  <td><strong>Laptop Daniel</strong></td>
+                  <td class="mono-cell">daniel-fedora</td>
+                  <td class="mono-cell">192.168.1.15<br><span style="font-size: 11px;">3C:22:FB:45:90:AB</span></td>
+                  <td>Intel Corporate</td>
+                  <td>PC / Laptop</td>
+                  <td><span class="badge badge-success">Presente</span></td>
+                  <td><span class="badge badge-success">Confiable</span></td>
+                  <td style="text-align: right;"><label for="device-modal-toggle" class="btn btn-sm" style="cursor: pointer;">Editar</label></td>
+                </tr>
+                <tr class="device-online device-trusted">
+                  <td><strong>iPhone Daniel</strong></td>
+                  <td class="mono-cell">iPhone-de-Daniel.local</td>
+                  <td class="mono-cell">192.168.1.42<br><span style="font-size: 11px;">A4:83:E7:55:12:34</span></td>
+                  <td>Apple, Inc.</td>
+                  <td>Smartphone</td>
+                  <td><span class="badge badge-success">Presente</span></td>
+                  <td><span class="badge badge-success">Confiable</span></td>
+                  <td style="text-align: right;"><label for="device-modal-toggle" class="btn btn-sm" style="cursor: pointer;">Editar</label></td>
+                </tr>
+                <tr class="device-online device-trusted">
+                  <td><strong>Samsung Smart TV</strong></td>
+                  <td class="mono-cell">tv-living.local</td>
+                  <td class="mono-cell">192.168.1.78<br><span style="font-size: 11px;">68:27:37:BC:11:F2</span></td>
+                  <td>Samsung Electronics</td>
+                  <td>Smart TV</td>
+                  <td><span class="badge badge-success">Presente</span></td>
+                  <td><span class="badge badge-success">Confiable</span></td>
+                  <td style="text-align: right;"><label for="device-modal-toggle" class="btn btn-sm" style="cursor: pointer;">Editar</label></td>
+                </tr>
+                <tr class="device-offline device-trusted">
+                  <td><strong>Sensor IoT Sala</strong></td>
+                  <td class="mono-cell">espressif-sensor</td>
+                  <td class="mono-cell">192.168.1.105<br><span style="font-size: 11px;">24:0A:C4:88:99:AA</span></td>
+                  <td>Espressif Inc.</td>
+                  <td>Dispositivo IoT</td>
+                  <td><span class="badge badge-muted">Ausente</span></td>
+                  <td><span class="badge badge-success">Confiable</span></td>
+                  <td style="text-align: right;"><label for="device-modal-toggle" class="btn btn-sm" style="cursor: pointer;">Editar</label></td>
+                </tr>
+                <tr class="device-online device-untrusted" style="background: #fffbeb;">
+                  <td><strong>Desconocido-199</strong> <span class="badge badge-warning">NUEVO</span></td>
+                  <td class="mono-cell">—</td>
+                  <td class="mono-cell">192.168.1.199<br><span style="font-size: 11px;">9C:B6:54:19:33:EE</span></td>
+                  <td>Desconocido</td>
+                  <td>Sin identificar</td>
+                  <td><span class="badge badge-success">Presente</span></td>
+                  <td><span class="badge badge-warning">Sin verificar</span></td>
+                  <td style="text-align: right;"><label for="device-modal-toggle" class="btn btn-sm btn-primary" style="cursor: pointer;">Editar</label></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </section>
+
+        <!-- ==================================================================
+             VISTA 3: HISTORIAL DE ESCANEOS
+             ================================================================== -->
+        <section class="view-container view-history">
+          
+          <div class="ux-annotation">
+            <span class="ux-tag">Trazabilidad ISO/IEC 25010</span>
+            <div><strong>Historial Cronológico (`scans` en base de datos):</strong> Cumple el requisito de auditoría y eficiencia registrando duración exacta en segundos (`duration_seconds`), fecha y cantidad de hosts. Se agrupa por jornadas para facilitar la consulta del usuario.</div>
+          </div>
+
+          <div class="view-title-row">
+            <div>
+              <h2>Historial de Escaneos</h2>
+              <p>Registro cronológico de auditorías ejecutadas de forma manual o programada</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-sm" type="button">Exportar CSV</button>
+              <button class="btn btn-sm" type="button">Exportar JSON</button>
+            </div>
+          </div>
+
+          <!-- Día: Hoy (Desplegable) -->
+          <details class="history-day" open>
+            <summary>
+              <span>📅 Hoy · 06 de Noviembre de 2026 (1 escaneo)</span>
+              <span class="badge badge-muted">6 hosts detectados</span>
+            </summary>
+            <div class="history-items-list">
+              <div class="history-entry">
+                <div>
+                  <strong>Escaneo #104 · 09:15:22 AM</strong>
+                  <div class="mono-cell" style="font-size: 11px; margin-top: 2px;">Target: 192.168.1.0/24 | Duración: 12.4s | 5 hosts activos + 1 nuevo detectado</div>
+                </div>
+                <div>
+                  <button class="btn btn-sm" type="button">Ver Resumen de Hosts</button>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- Día: Ayer (Desplegable) -->
+          <details class="history-day" open>
+            <summary>
+              <span>📅 Ayer · 05 de Noviembre de 2026 (2 escaneos)</span>
+              <span class="badge badge-muted">5 hosts detectados</span>
+            </summary>
+            <div class="history-items-list">
+              <div class="history-entry">
+                <div>
+                  <strong>Escaneo #103 · 18:30:10 PM</strong>
+                  <div class="mono-cell" style="font-size: 11px; margin-top: 2px;">Target: 192.168.1.0/24 | Duración: 14.1s | 5 hosts activos | Estado nominal</div>
+                </div>
+                <div>
+                  <button class="btn btn-sm" type="button">Ver Resumen de Hosts</button>
+                </div>
+              </div>
+              <div class="history-entry">
+                <div>
+                  <strong>Escaneo #102 · 10:00:04 AM</strong>
+                  <div class="mono-cell" style="font-size: 11px; margin-top: 2px;">Target: 192.168.1.0/24 | Duración: 13.8s | 5 hosts activos</div>
+                </div>
+                <div>
+                  <button class="btn btn-sm" type="button">Ver Resumen de Hosts</button>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- Día: Anterior -->
+          <details class="history-day">
+            <summary>
+              <span>📅 15 de Octubre de 2026 (1 escaneo inicial)</span>
+              <span class="badge badge-muted">5 hosts</span>
+            </summary>
+            <div class="history-items-list">
+              <div class="history-entry">
+                <div>
+                  <strong>Escaneo #001 · 22:15:00 PM</strong>
+                  <div class="mono-cell" style="font-size: 11px; margin-top: 2px;">Target: 192.168.1.0/24 | Duración: 15.2s | Primer escaneo del sistema</div>
+                </div>
+                <div>
+                  <button class="btn btn-sm" type="button">Ver Resumen de Hosts</button>
+                </div>
+              </div>
+            </div>
+          </details>
+
+        </section>
+
+        <!-- ==================================================================
+             VISTA 4: ANALÍTICAS Y SEGURIDAD
+             ================================================================== -->
+        <section class="view-container view-analytics">
+          
+          <div class="ux-annotation">
+            <span class="ux-tag">Visualización de Datos</span>
+            <div><strong>Analíticas y Detección de Riesgos:</strong> Representa tendencias históricas y resalta puertos críticos detectados (ej. Telnet 23, FTP 21, SMB 445) para que el usuario conozca qué servicios están expuestos en su hogar.</div>
+          </div>
+
+          <div class="view-title-row">
+            <div>
+              <h2>Analíticas de Red y Vulnerabilidades</h2>
+              <p>Métricas visuales agregadas sobre presencia de equipos y servicios expuestos</p>
+            </div>
+          </div>
+
+          <!-- Gráfico Wireframe de Presencia -->
+          <div class="chart-container">
+            <div class="chart-header">
+              <h3>Tendencia de Dispositivos Conectados (Últimas 24 Horas)</h3>
+              <p>Fluctuación de hosts observados durante escaneos periódicos</p>
+            </div>
+            
+            <!-- SVG Wireframe Chart -->
+            <div style="width: 100%; height: 180px; background: #fafafa; border: 1px solid var(--wf-border); border-radius: var(--radius-sm); position: relative; overflow: hidden;">
+              <svg viewBox="0 0 600 180" style="width: 100%; height: 100%;">
+                <!-- Ejes y Grilla -->
+                <line x1="40" y1="20" x2="580" y2="20" stroke="#e2e8f0" stroke-dasharray="4"></line>
+                <line x1="40" y1="60" x2="580" y2="60" stroke="#e2e8f0" stroke-dasharray="4"></line>
+                <line x1="40" y1="100" x2="580" y2="100" stroke="#e2e8f0" stroke-dasharray="4"></line>
+                <line x1="40" y1="140" x2="580" y2="140" stroke="#cbd5e1"></line>
+
+                <!-- Etiquetas Eje Y -->
+                <text x="15" y="25" font-size="10" fill="#94a3b8" font-family="monospace">8 dev</text>
+                <text x="15" y="65" font-size="10" fill="#94a3b8" font-family="monospace">6 dev</text>
+                <text x="15" y="105" font-size="10" fill="#94a3b8" font-family="monospace">4 dev</text>
+                <text x="15" y="145" font-size="10" fill="#94a3b8" font-family="monospace">0 dev</text>
+
+                <!-- Línea de Datos Wireframe -->
+                <polyline
+                  fill="none"
+                  stroke="#2563eb"
+                  stroke-width="3"
+                  points="50,100 120,100 190,80 260,80 330,60 400,60 470,80 540,60"
+                />
+
+                <!-- Puntos de Datos -->
+                <circle cx="50" cy="100" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="2"></circle>
+                <circle cx="120" cy="100" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="2"></circle>
+                <circle cx="190" cy="80" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="2"></circle>
+                <circle cx="260" cy="80" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="2"></circle>
+                <circle cx="330" cy="60" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="2"></circle>
+                <circle cx="400" cy="60" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="2"></circle>
+                <circle cx="470" cy="80" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="2"></circle>
+                <circle cx="540" cy="60" r="5" fill="#dc2626" stroke="#ffffff" stroke-width="2"></circle>
+              </svg>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--wf-text-dim); margin-top: 6px;">
+              <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>Ahora (6 hosts detectados)</span>
+            </div>
+          </div>
+
+          <!-- Distribución de Fabricantes y Puertos Riesgosos -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="chart-container">
+              <div class="chart-header">
+                <h3>Fabricantes de Adaptadores (OUI)</h3>
+              </div>
+              <div style="font-size: 13px; display: flex; flex-direction: column; gap: 8px;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                    <span>Intel Corporate</span><strong>33% (2)</strong>
+                  </div>
+                  <div style="height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                    <div style="width: 33%; height: 100%; background: #475569;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                    <span>Apple, Inc.</span><strong>17% (1)</strong>
+                  </div>
+                  <div style="height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                    <div style="width: 17%; height: 100%; background: #475569;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                    <span>Samsung Electronics</span><strong>17% (1)</strong>
+                  </div>
+                  <div style="height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                    <div style="width: 17%; height: 100%; background: #475569;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                    <span>Desconocido (Sin OUI)</span><strong style="color: #dc2626;">17% (1)</strong>
+                  </div>
+                  <div style="height: 6px; background: #fee2e2; border-radius: 3px; overflow: hidden;">
+                    <div style="width: 17%; height: 100%; background: #dc2626;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <div class="chart-header">
+                <h3>Monitoreo de Puertos Críticos</h3>
+              </div>
+              <div style="font-size: 12px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 6px; border-bottom: 1px solid var(--wf-border);">
+                  <span>Puerto 22 · SSH (Administración segura)</span>
+                  <span class="badge badge-muted">1 host (Daniel Laptop)</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 6px; border-bottom: 1px solid var(--wf-border);">
+                  <span>Puerto 80/443 · HTTP / HTTPS (Web)</span>
+                  <span class="badge badge-muted">3 hosts</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 6px; border-bottom: 1px solid var(--wf-border); background: #fef2f2; padding: 4px 6px; border-radius: 4px;">
+                  <strong style="color: #991b1b;">Puerto 23 · Telnet (Texto plano / Inseguro)</strong>
+                  <span class="badge badge-danger">1 host (9C:B6:54:19:33:EE)</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>Puerto 445 · SMB / NetBIOS</span>
+                  <span class="badge badge-success">0 detectados (Seguro)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ==================================================================
+             VISTA 5: CONFIGURACIÓN Y PLANIFICADOR (SCHEDULER)
+             ================================================================== -->
+        <section class="view-container view-settings">
+          
+          <div class="ux-annotation">
+            <span class="ux-tag">Orquestación en Segundo Plano</span>
+            <div><strong>Servicio de Tareas y Scheduler (`SchedulerService`):</strong> Permite la auditoría continua sin congelar el backend ni la interfaz. Ejecuta tareas asíncronas con ThreadPoolExecutor y recupera tareas pendientes tras reinicio.</div>
+          </div>
+
+          <div class="view-title-row">
+            <div>
+              <h2>Configuración del Sistema y Escaneos de Fondo</h2>
+              <p>Parámetros del planificador automático y red de escaneo</p>
+            </div>
+            <button class="btn btn-primary" type="button">Guardar Configuración</button>
+          </div>
+
+          <div class="config-card">
+            <!-- Fila 1: Activar Scheduler -->
+            <div class="config-row">
+              <div class="config-text">
+                <h4>Activar Escaneo Periódico en Segundo Plano</h4>
+                <p>Ejecuta automáticamente auditorías continuas sin requerir intervención manual</p>
+              </div>
+              <label class="switch-label">
+                <input type="checkbox" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Fila 2: Frecuencia -->
+            <div class="config-row">
+              <div class="config-text">
+                <h4>Intervalo de Frecuencia</h4>
+                <p>Tiempo de espera entre ejecuciones automáticas sucesivas</p>
+              </div>
+              <select style="padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--wf-border-strong); background: white; font-size: 13px;">
+                <option>Cada 15 minutos</option>
+                <option selected>Cada 30 minutos (Recomendado)</option>
+                <option>Cada 1 hora</option>
+                <option>Cada 4 horas</option>
+                <option>Una vez al día (24h)</option>
+              </select>
+            </div>
+
+            <!-- Fila 3: Rango de Red CIDR -->
+            <div class="config-row">
+              <div class="config-text">
+                <h4>Segmento de Red Objetivo (CIDR)</h4>
+                <p>Subred IP a escanear (dejar en blanco para autodetectar mediante gateway)</p>
+              </div>
+              <input type="text" value="192.168.1.0/24" style="padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--wf-border-strong); font-family: var(--font-mono); font-size: 13px; width: 180px;">
+            </div>
+
+            <!-- Fila 4: Ejecución Manual Asíncrona -->
+            <div class="config-row">
+              <div class="config-text">
+                <h4>Disparo Manual Inmediato (Asíncrono)</h4>
+                <p>Encola una tarea en segundo plano sin esperar al temporizador</p>
+              </div>
+              <button class="btn btn-sm" type="button">
+                <span>⚡ Encolar Tarea de Fondo</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Estado del Worker -->
+          <div class="config-card" style="background: #f8fafc;">
+            <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">Estado del Motor Asíncrono de Fondo</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12px;">
+              <div><strong>Estado del Planificador:</strong> <span style="color: var(--wf-success);">● ACTIVO</span></div>
+              <div><strong>Próximo Escaneo Previsto:</strong> hoy a las 09:45 AM</div>
+              <div><strong>Hilos Máximos Concurrencia:</strong> 1 Worker (Prevención saturación Nmap)</div>
+              <div><strong>Base de Datos:</strong> <span class="mono-cell">backend/app/db/netguard.db</span></div>
+            </div>
+          </div>
+
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ========================================================================
+       MODAL DE DETALLE DE DISPOSITIVO (DEVICEDETAILMODAL)
+       INTERACTIVO MEDIANTE CHECKBOX O :TARGET
+       ======================================================================== -->
+  <div class="modal-overlay" id="modal-device-view">
+    <label for="device-modal-toggle" class="modal-backdrop-dismiss" title="Haz clic fuera para cerrar"></label>
+    <div class="modal-content">
+      
+      <div class="modal-header">
+        <h3>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          Detalle del Dispositivo
+        </h3>
+        <!-- Botón de cierre para checkbox y para :target -->
+        <label for="device-modal-toggle" class="modal-close-btn" title="Cerrar modal">✕</label>
+      </div>
+
+      <div class="modal-body">
+        
+        <div class="ux-annotation" style="margin-top: 0;">
+          <span class="ux-tag">Componente Modal</span>
+          <div><strong>`DeviceDetailModal.tsx`:</strong> Permite inspeccionar la evidencia técnica recopilada por Nmap y persistir el alias o el estado de confianza en la tabla `devices`.</div>
+        </div>
+
+        <!-- Formulario Editable: Alias y Confianza -->
+        <div class="modal-form-group">
+          <label for="device-alias-input">Alias Personalizado (Editable por el usuario):</label>
+          <input type="text" id="device-alias-input" value="Equipo Desconocido (Posible Cámara IoT)">
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; background: var(--wf-canvas); padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 20px; border: 1px solid var(--wf-border);">
+          <div>
+            <strong style="font-size: 13px;">Marcar como Dispositivo de Confianza</strong>
+            <p style="font-size: 11px; color: var(--wf-text-muted);">Indica al sistema que este dispositivo pertenece a la red del hogar</p>
+          </div>
+          <label class="switch-label">
+            <input type="checkbox">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Datos Técnicos Fijos -->
+        <h4 style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--wf-text-muted); margin-bottom: 10px; letter-spacing: 0.5px;">Identificación de Red</h4>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <div class="detail-label">Dirección IP Actual</div>
+            <div class="detail-value detail-value-mono">192.168.1.199</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Dirección Física (MAC)</div>
+            <div class="detail-value detail-value-mono">9C:B6:54:19:33:EE</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Fabricante (OUI)</div>
+            <div class="detail-value">Desconocido (Sin registro IEEE)</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Estado de Presencia</div>
+            <div class="detail-value" style="color: var(--wf-success);">● Presente (Online)</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Primer Escaneo Visto</div>
+            <div class="detail-value">Hoy, 09:15 AM</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Escaneos Totales</div>
+            <div class="detail-value">1 aparición (Nuevo)</div>
+          </div>
+        </div>
+
+        <!-- Evidencia de Puertos y Servicios Nmap -->
+        <h4 style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--wf-text-muted); margin-bottom: 10px; letter-spacing: 0.5px;">Fingerprinting y Puertos Abiertos</h4>
+        <div style="background: var(--wf-canvas); border: 1px solid var(--wf-border); border-radius: var(--radius-sm); padding: 12px;">
+          <div style="margin-bottom: 8px;">
+            <span class="port-pill-risk">Puerto 23/TCP · Telnet</span>
+            <span style="font-size: 12px; color: #991b1b; font-weight: 600;">⚠️ Protocolo en texto claro (Riesgo potencial)</span>
+          </div>
+          <div>
+            <span class="port-pill">Puerto 80/TCP · HTTP</span>
+            <span style="font-size: 12px; color: var(--wf-text-muted);">Servidor Web Embebido (Boa/0.94)</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <label for="device-modal-toggle" class="btn" style="cursor: pointer;">Cerrar</label>
+        <label for="device-modal-toggle" class="btn btn-primary" style="cursor: pointer;">Guardar Cambios</label>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       FOOTER INFORMATIVO PARA EL ARCHIVO / DOCUMENTACIÓN ACADÉMICA
+       ======================================================================== -->
+  <footer class="academic-footer-info">
+    <div>
+      <strong>NetGuard · Formulación y Evaluación de Proyectos de Software</strong>
+      <div style="color: var(--wf-text-dim); margin-top: 2px;">Daniel Cobo &amp; Juan Colorado · Sustentación e Ingeniería de Software</div>
+    </div>
+    <div>
+      <span>Entregable: <strong>Mockup de Media Fidelidad / Wireframe Navegable</strong></span>
+    </div>
+  </footer>
+
+</body>
+</html>
